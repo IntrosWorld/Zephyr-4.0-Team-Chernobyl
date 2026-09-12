@@ -35,3 +35,14 @@ The server will start on port `5000` (or whatever is specified in `.env`).
 
 - `GET /api/health` - Basic health check endpoint.
 - `GET /api/user/me` - (Protected) Returns verified user information from the provided Firebase Bearer token.
+- `GET /api/tasks` / `POST /api/tasks` / `PUT /api/tasks/:id` / `DELETE /api/tasks/:id` - (Protected) CRUD for a user's habits/dailies/todos.
+- `PUT /api/integrations` - (Protected) Save the GitHub and/or LeetCode usernames to track. Body: `{ "github": "octocat", "leetcode": "someuser" }`. Either field can be omitted to leave it unchanged, or set to `""`/`null` to clear it.
+- `GET /api/integrations/github` - (Protected) Fetches live stats for the user's saved GitHub username: public repo count, followers, and (if `GITHUB_TOKEN` is set) total contributions and current streak.
+- `GET /api/integrations/leetcode` - (Protected) Fetches live stats for the user's saved LeetCode username: total/easy/medium/hard problems solved, ranking, and current streak.
+
+### GitHub & LeetCode integrations
+
+Both integrations read from public data only, using the username the user saves via `PUT /api/integrations` (stored on their Firestore user doc under `integrations.github` / `integrations.leetcode`, see `src/services/userService.js`).
+
+- **GitHub** (`src/services/githubService.js`) calls the public REST API for profile info (no token required). Contribution streak and total-contributions count require GitHub's GraphQL API, which needs a token — set `GITHUB_TOKEN` in `.env` to a personal access token with no scopes to enable it. Without a token, `totalContributions` and `currentStreak` are returned as `null`.
+- **LeetCode** (`src/services/leetcodeService.js`) calls LeetCode's public (unofficial, undocumented) GraphQL endpoint at `leetcode.com/graphql`. No token is needed, but this endpoint isn't officially supported by LeetCode and could change without notice.

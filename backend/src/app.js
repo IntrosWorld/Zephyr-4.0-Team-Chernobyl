@@ -8,6 +8,7 @@ const { initFirebaseAdmin } = require("./config/firebaseAdmin");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const taskRoutes = require("./routes/taskRoutes");
+const integrationRoutes = require("./routes/integrationRoutes");
 const { errorHandler, notFoundHandler } = require("./middleware/errorMiddleware");
 
 // Initialize Firebase Admin SDK
@@ -45,6 +46,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/integrations", integrationRoutes);
 
 // Error Handling
 app.use(notFoundHandler);

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { getMe } from "../lib/api";
+import IntegrationsPanel from "../components/IntegrationsPanel";
 
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
@@ -12,19 +14,7 @@ export default function Dashboard() {
     async function fetchBackendUser() {
       if (!currentUser) return;
       try {
-        const token = await currentUser.getIdToken();
-        const response = await fetch("http://localhost:5000/api/user/me", {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to authenticate with backend");
-        }
-
-        const data = await response.json();
-        setBackendUser(data);
+        setBackendUser(await getMe(currentUser));
       } catch (err) {
         console.error(err);
         setError("Error connecting to backend");
@@ -106,8 +96,10 @@ export default function Dashboard() {
           </div>
         </div>
 
+        <IntegrationsPanel />
+
         <div className="text-center text-gray-500 text-sm">
-          <p>Dashboard functionality, tasks, and gamification to be implemented.</p>
+          <p>Task tracking and gamification to be implemented.</p>
         </div>
       </div>
     </div>
