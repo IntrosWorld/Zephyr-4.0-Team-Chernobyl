@@ -20,6 +20,10 @@ const getOrCreateUser = async (uid, email, displayName) => {
         maxHp: 50,
         currentHp: 50,
       },
+      integrations: {
+        github: null,
+        leetcode: null,
+      },
       createdAt: new Date().toISOString(),
       lastLogin: new Date().toISOString(),
     };
@@ -30,8 +34,25 @@ const getOrCreateUser = async (uid, email, displayName) => {
 
   // Update last login
   await userRef.update({ lastLogin: new Date().toISOString() });
-  
+
   return doc.data();
 };
 
-module.exports = { getOrCreateUser };
+/**
+ * Saves the usernames a user wants tracked for external integrations
+ * (GitHub, LeetCode, ...). Pass null/undefined to leave a field unchanged.
+ */
+const updateIntegrations = async (uid, { github, leetcode }) => {
+  const userRef = getDb().collection("users").doc(uid);
+
+  const updates = {};
+  if (github !== undefined) updates["integrations.github"] = github || null;
+  if (leetcode !== undefined) updates["integrations.leetcode"] = leetcode || null;
+
+  await userRef.update(updates);
+
+  const doc = await userRef.get();
+  return doc.data().integrations;
+};
+
+module.exports = { getOrCreateUser, updateIntegrations };
