@@ -91,13 +91,13 @@ function LaptopHotspot({ onOpen, disabled }) {
   }, [disabled, hovered]);
 
   return (
-    <group position={[-42, 184, 118]} rotation={[0, -0.08, 0]}>
+    <group position={[-6, 176, 194]} rotation={[0, -0.08, 0]}>
       <mesh
         onClick={(event) => { event.stopPropagation(); if (!disabled) onOpen(); }}
         onPointerOver={(event) => { event.stopPropagation(); setHovered(true); }}
         onPointerOut={() => setHovered(false)}
       >
-        <boxGeometry args={[92, 86, 68]} />
+        <boxGeometry args={[102, 76, 70]} />
         <meshBasicMaterial transparent opacity={hovered && !disabled ? 0.12 : 0} color="#7de7ff" depthWrite={false} />
       </mesh>
       {hovered && !disabled && (
@@ -132,6 +132,7 @@ function Loader() {
 
 const laptopApps = [
   { id: "browser", icon: "◎", label: "Browser" },
+  { id: "spotify", icon: "●", label: "Spotify" },
   { id: "notes", icon: "▤", label: "Notes" },
   { id: "files", icon: "▱", label: "Files" },
 ];
@@ -153,8 +154,9 @@ function LaptopOS({ onClose }) {
     <section className={`laptop-os ${fullscreen ? "is-fullscreen" : "is-windowed"}`} role="dialog" aria-modal="true" aria-label="Study laptop">
       <div className="os-wallpaper" />
       <header className="os-topbar">
-        <strong>Zephyr OS</strong>
-        <span>Study mode · Online</span>
+        <strong className="mac-apple">●</strong>
+        <nav className="mac-menu"><b>Finder</b><span>File</span><span>Edit</span><span>View</span><span>Go</span><span>Window</span><span>Help</span></nav>
+        <span className="mac-status">Study mode · Online</span>
         <div className="os-actions">
           <button type="button" onClick={() => setFullscreen((value) => !value)}>{fullscreen ? "Windowed" : "Full screen"}</button>
           <button type="button" onClick={onClose} aria-label="Return to room">Return to room</button>
@@ -194,6 +196,16 @@ function LaptopOS({ onClose }) {
                 </div>
               </div>
             ) : <iframe title="Zephyr browser" src={page} sandbox="allow-forms allow-scripts allow-same-origin allow-popups" />}
+          </div>
+        )}
+
+        {activeApp === "spotify" && (
+          <div className="os-spotify">
+            <aside><strong>Spotify</strong><span>⌂ Home</span><span>⌕ Search</span><span>▤ Your Library</span><small>OFFICIAL NCS PLAYLIST</small><b>NCS Releases</b></aside>
+            <div>
+              <div className="spotify-heading"><span>Playlist</span><h2>NCS Releases</h2><p>Copyright-free electronic music for studying, gaming and creating.</p></div>
+              <iframe title="NCS Releases on Spotify" src="https://open.spotify.com/embed/playlist/7sZbq8QGyMnhKPcLJvCUFD?utm_source=generator&amp;theme=0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" />
+            </div>
           </div>
         )}
 
