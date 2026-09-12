@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
-import { Html, OrbitControls, useAnimations, useGLTF, useProgress } from "@react-three/drei";
-import { Box3, DoubleSide, Vector3 } from "three";
+import { Html, OrbitControls, useAnimations, useGLTF, useProgress, useTexture } from "@react-three/drei";
+import { Box3, DoubleSide, SRGBColorSpace, Vector3 } from "three";
 
 const MODEL_URL = "/models/study-girl/15961a17a125467e9367ee452fd1950c_Textured.gltf";
 // Source was authored Z-up in Blender; glTF arrives in Three.js as (x, z, -y).
@@ -16,8 +16,7 @@ function StudyGirlModel({ onReady }) {
     scene.traverse((object) => {
       if (!object.isMesh && !object.isSkinnedMesh) return;
 
-      // This is a giant presentation card rather than useful room geometry. Its
-      // projected texture and orientation only work from the author's camera.
+      // The exported backdrop is a large presentation card, not the window.
       if (object.name.toUpperCase().includes("BACKDROP")) {
         object.visible = false;
         return;
@@ -71,6 +70,17 @@ function StudyGirlModel({ onReady }) {
   return <group ref={group}><primitive object={scene} /></group>;
 }
 
+function WindowSky() {
+  const texture = useTexture("/models/study-girl/window-sky.svg?v=2");
+  texture.colorSpace = SRGBColorSpace;
+  return (
+    <mesh position={[-209.5, 287, 81]} rotation={[0, Math.PI / 2, 0]}>
+      <planeGeometry args={[178, 302]} />
+      <meshBasicMaterial map={texture} side={DoubleSide} />
+    </mesh>
+  );
+}
+
 function OrbitCamera({ controls, bounds }) {
   const { camera } = useThree();
   const initialized = useRef(false);
@@ -117,6 +127,7 @@ export default function StudyGirlPage() {
         <directionalLight position={[-220, 320, 260]} intensity={0.35} color="#fff0d8" />
         <directionalLight position={[180, 130, -180]} intensity={0.18} color="#cfe2ff" />
         <Suspense fallback={<Loader />}>
+          <WindowSky />
           <StudyGirlModel onReady={onReady} />
         </Suspense>
         <OrbitCamera controls={controls} bounds={bounds} />
