@@ -1,9 +1,15 @@
-import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Html, OrbitControls, useAnimations, useGLTF, useProgress, useTexture } from "@react-three/drei";
 import { Box3, DoubleSide, SRGBColorSpace, Vector3 } from "three";
 
 const MODEL_URL = "/models/study-girl/15961a17a125467e9367ee452fd1950c_Textured.gltf";
+const NCS_TRACKS = [
+  { title: "Dreamer", artist: "Alan Walker", url: "https://ncs.io/track/download/af3e020d-b90d-439a-9106-76eb863784eb", color: "#7b2ea3" },
+  { title: "Sky High", artist: "Elektronomia", url: "https://ncsmusic.s3.eu-west-1.amazonaws.com/tracks/000/000/290/sky-high-1586948785-jGkCsW2xA9.mp3", color: "#176ba0" },
+  { title: "Heroes Tonight", artist: "Janji feat. Johnning", url: "https://ncsmusic.s3.eu-west-1.amazonaws.com/tracks/000/000/143/heroes-tonight-feat-johnning-1586946924-fcppiBJp7z.mp3", color: "#b54735" },
+  { title: "On & On", artist: "Cartoon feat. Daniel Levi", url: "https://ncsmusic.s3.eu-west-1.amazonaws.com/tracks/000/000/152/1654766391_N6n9kRBaAr_Cartoon---On--On-feat.-Daniel-Levi-_NCS-Release_.mp3", color: "#2b8768" },
+];
 // Source was authored Z-up in Blender; glTF arrives in Three.js as (x, z, -y).
 const ROOM_FOCUS = new Vector3(8, 128, 92);
 const ROOM_CAMERA_OFFSET = new Vector3(-155, 175, 540);
@@ -131,24 +137,94 @@ function Loader() {
 }
 
 const laptopApps = [
-  { id: "browser", icon: "◎", label: "Browser" },
-  { id: "spotify", icon: "●", label: "Spotify" },
-  { id: "notes", icon: "▤", label: "Notes" },
-  { id: "files", icon: "▱", label: "Files" },
+  { id: "browser", label: "Safari" },
+  { id: "spotify", label: "Spotify" },
+  { id: "notes", label: "Notes" },
+  { id: "files", label: "Finder" },
 ];
 
-function LaptopOS({ onClose }) {
+function MacAppIcon({ app }) {
+  return <span className={`mac-app-icon icon-${app.id}`} aria-hidden="true"><i /></span>;
+}
+
+function AnalogClock({ date }) {
+  return (
+    <div className="analog-clock" aria-label={date.toLocaleTimeString()}>
+      {Array.from({ length: 12 }, (_, index) => <i key={index} style={{ "--tick": index }} />)}
+      <b className="clock-hour" style={{ transform: `rotate(${((date.getHours() % 12) + date.getMinutes() / 60) * 30}deg)` }} />
+      <b className="clock-minute" style={{ transform: `rotate(${date.getMinutes() * 6}deg)` }} />
+      <b className="clock-second" style={{ transform: `rotate(${date.getSeconds() * 6}deg)` }} />
+      <em />
+    </div>
+  );
+}
+
+function RoomClockWidget() {
+  const [now, setNow] = useState(() => new Date());
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return (
+    <aside className={`room-clock-widget ${collapsed ? "is-collapsed" : ""}`}>
+      <button type="button" className="room-clock-toggle" onClick={() => setCollapsed((value) => !value)} aria-label={collapsed ? "Expand clock" : "Collapse clock"}>{collapsed ? "+" : "−"}</button>
+      <AnalogClock date={now} />
+      {!collapsed && <div><time>{now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time><span>{now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}</span></div>}
+    </aside>
+  );
+}
+
+function MusicControls({ music, compact = false }) {
+  const progress = music.duration ? (music.currentTime / music.duration) * 100 : 0;
+  const formatTime = (value) => {
+    if (!Number.isFinite(value)) return "0:00";
+    const minutes = Math.floor(value / 60);
+    return `${minutes}:${String(Math.floor(value % 60)).padStart(2, "0")}`;
+  };
+  return (
+    <div className={`music-controller ${compact ? "is-compact" : ""}`}>
+      <div className="music-cover" style={{ "--cover-color": music.track.color }}><span>NCS</span><i /></div>
+      <div className="music-player-main">
+        <div className="music-meta"><strong>{music.track.title}</strong><span>{music.track.artist} · NCS</span></div>
+        <div className="music-timeline">
+          <input aria-label="Song progress" type="range" min="0" max="100" step="0.1" value={progress} disabled={!music.duration} onInput={(event) => music.seek((Number(event.currentTarget.value) / 100) * music.duration)} />
+          {!compact && <span>{formatTime(music.currentTime)} / {formatTime(music.duration)}</span>}
+        </div>
+        <div className="music-actions">
+          {!compact && <button type="button" className={music.shuffle ? "is-active" : ""} onClick={music.toggleShuffle} aria-label="Toggle shuffle">⌘</button>}
+          <button type="button" onClick={music.previous} aria-label="Previous song">Ⅰ◀</button>
+          <button type="button" className="music-play" onClick={music.toggle} aria-label={music.playing ? `Pause ${music.track.title}` : `Play ${music.track.title}`}>{music.playing ? "Ⅱ" : "▶"}</button>
+          <button type="button" onClick={music.next} aria-label="Next song">▶Ⅰ</button>
+          {!compact && <button type="button" className={music.saved ? "is-active" : ""} onClick={music.toggleSaved} aria-label={music.saved ? "Remove from favorites" : "Add to favorites"}>{music.saved ? "✓" : "+"}</button>}
+        </div>
+        <div className="music-volume"><button type="button" onClick={music.toggleMute} aria-label={music.muted ? "Unmute" : "Mute"}>{music.muted ? "🔇" : "🔊"}</button><input aria-label="Volume" type="range" min="0" max="1" step="0.01" value={music.muted ? 0 : music.volume} onInput={(event) => music.setVolume(Number(event.currentTarget.value))} /></div>
+      </div>
+    </div>
+  );
+}
+
+function LaptopOS({ onClose, music }) {
   const [activeApp, setActiveApp] = useState("browser");
   const [fullscreen, setFullscreen] = useState(false);
+  const [minimized, setMinimized] = useState(false);
   const [address, setAddress] = useState("zephyr://home");
   const [page, setPage] = useState("zephyr://home");
   const [notes, setNotes] = useState("Focus for today:\n• Finish the 3D study room\n• Review quests\n• Take a real break");
+  const [spotifyView, setSpotifyView] = useState("home");
+  const [showOfficial, setShowOfficial] = useState(false);
+  const [desktopTime, setDesktopTime] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setDesktopTime(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
   const openAddress = (event) => {
     event.preventDefault();
     const next = address.trim();
     if (!next) return;
     setPage(next.includes("://") ? next : `https://${next}`);
   };
+  const openApp = (id) => { setActiveApp(id); setMinimized(false); };
 
   return (
     <section className={`laptop-os ${fullscreen ? "is-fullscreen" : "is-windowed"}`} role="dialog" aria-modal="true" aria-label="Study laptop">
@@ -165,15 +241,32 @@ function LaptopOS({ onClose }) {
 
       <nav className="os-desktop-icons" aria-label="Applications">
         {laptopApps.map((app) => (
-          <button key={app.id} type="button" onDoubleClick={() => setActiveApp(app.id)} onClick={() => setActiveApp(app.id)}>
-            <span>{app.icon}</span>{app.label}
+          <button key={app.id} type="button" onDoubleClick={() => openApp(app.id)} onClick={() => openApp(app.id)}>
+            <MacAppIcon app={app} />{app.label}
           </button>
         ))}
       </nav>
 
-      <article className="os-window">
+      <aside className="os-widget-stack" aria-label="Desktop widgets">
+        <section className="mac-widget mac-clock-widget">
+          <AnalogClock date={desktopTime} />
+          <div><time>{desktopTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time><span>{desktopTime.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</span></div>
+        </section>
+        <section className="mac-widget mac-calendar-widget">
+          <header><strong>{desktopTime.toLocaleDateString([], { month: "long" })}</strong><b>{desktopTime.getDate()}</b></header>
+          <div>{["S", "M", "T", "W", "T", "F", "S"].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
+          <p>Today</p><strong>Deep work session</strong><small>10:00 – 11:30</small>
+        </section>
+        <section className="mac-widget mac-focus-widget"><span>FOCUS</span><strong>1h 20m</strong><p>Daily goal · 67%</p><i><b /></i></section>
+      </aside>
+
+      <article className={`os-window ${minimized || !activeApp ? "is-minimized" : ""}`}>
         <header className="os-windowbar">
-          <div className="os-dots"><i /><i /><i /></div>
+          <div className="os-dots">
+            <button className="dot-close" type="button" onClick={() => setActiveApp("")} aria-label="Close application" />
+            <button className="dot-minimize" type="button" onClick={() => setMinimized(true)} aria-label="Minimize application" />
+            <button className="dot-maximize" type="button" onClick={() => setFullscreen((value) => !value)} aria-label="Toggle full screen" />
+          </div>
           <strong>{laptopApps.find((app) => app.id === activeApp)?.label}</strong>
           <button type="button" onClick={() => setActiveApp("")} aria-label="Close application">×</button>
         </header>
@@ -201,10 +294,20 @@ function LaptopOS({ onClose }) {
 
         {activeApp === "spotify" && (
           <div className="os-spotify">
-            <aside><strong>Spotify</strong><span>⌂ Home</span><span>⌕ Search</span><span>▤ Your Library</span><small>OFFICIAL NCS PLAYLIST</small><b>NCS Releases</b></aside>
-            <div>
+            <aside><strong>Spotify</strong><button type="button" className={spotifyView === "home" ? "active" : ""} onClick={() => setSpotifyView("home")}>⌂ Home</button><button type="button" className={spotifyView === "search" ? "active" : ""} onClick={() => setSpotifyView("search")}>⌕ Search</button><button type="button" className={spotifyView === "library" ? "active" : ""} onClick={() => setSpotifyView("library")}>▤ Your Library</button><small>OFFICIAL NCS PLAYLIST</small><button type="button" onClick={() => setShowOfficial((value) => !value)}>NCS Releases</button></aside>
+            <div className="spotify-main">
               <div className="spotify-heading"><span>Playlist</span><h2>NCS Releases</h2><p>Copyright-free electronic music for studying, gaming and creating.</p></div>
-              <iframe title="NCS Releases on Spotify" src="https://open.spotify.com/embed/playlist/7sZbq8QGyMnhKPcLJvCUFD?utm_source=generator&amp;theme=0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" />
+              <MusicControls music={music} />
+              {spotifyView === "search" && <label className="spotify-search">Search this playlist<input autoFocus placeholder="Song or artist" onChange={(event) => music.setQuery(event.target.value)} /></label>}
+              <div className="spotify-track-list" aria-label="NCS songs">
+                {music.tracks.filter((track) => `${track.title} ${track.artist}`.toLowerCase().includes(music.query.toLowerCase())).map((track) => (
+                  <button type="button" key={track.title} className={music.track.title === track.title ? "active" : ""} onClick={() => music.select(music.tracks.indexOf(track))}>
+                    <span>{music.track.title === track.title && music.playing ? "Ⅱ" : "▶"}</span><strong>{track.title}<small>{track.artist}</small></strong><em>NCS</em>
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="spotify-official-toggle" onClick={() => setShowOfficial((value) => !value)}>{showOfficial ? "Hide" : "Browse"} official Spotify playlist</button>
+              {showOfficial && <iframe title="NCS Releases on Spotify" src="https://open.spotify.com/embed/playlist/7sZbq8QGyMnhKPcLJvCUFD?utm_source=generator&amp;theme=0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" />}
             </div>
           </div>
         )}
@@ -226,7 +329,7 @@ function LaptopOS({ onClose }) {
       </article>
 
       <footer className="os-dock">
-        {laptopApps.map((app) => <button key={app.id} type="button" className={activeApp === app.id ? "active" : ""} onClick={() => setActiveApp(app.id)} title={app.label}>{app.icon}</button>)}
+        {laptopApps.map((app) => <button key={app.id} type="button" className={activeApp === app.id && !minimized ? "active" : ""} onClick={() => openApp(app.id)} title={app.label}><MacAppIcon app={app} /></button>)}
       </footer>
     </section>
   );
@@ -234,8 +337,109 @@ function LaptopOS({ onClose }) {
 
 export default function StudyGirlPage() {
   const controls = useRef(null);
+  const audioRef = useRef(null);
   const [bounds, setBounds] = useState(null);
   const [laptopOpen, setLaptopOpen] = useState(false);
+  const [musicState, setMusicState] = useState({ playing: false, currentTime: 0, duration: 0 });
+  const [volume, setVolumeState] = useState(0.75);
+  const [muted, setMuted] = useState(false);
+  const [trackIndex, setTrackIndex] = useState(0);
+  const [shuffle, setShuffle] = useState(false);
+  const [savedTracks, setSavedTracks] = useState([]);
+  const [musicQuery, setMusicQuery] = useState("");
+  const playAfterTrackChange = useRef(false);
+
+  const changeTrack = useCallback((direction, autoplay) => {
+    playAfterTrackChange.current = autoplay;
+    setTrackIndex((current) => shuffle
+      ? (current + 1 + Math.floor(Math.random() * (NCS_TRACKS.length - 1))) % NCS_TRACKS.length
+      : (current + direction + NCS_TRACKS.length) % NCS_TRACKS.length);
+  }, [shuffle]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return undefined;
+    const sync = () => {
+      const seekableDuration = audio.seekable.length ? audio.seekable.end(audio.seekable.length - 1) : 0;
+      const duration = Number.isFinite(audio.duration) ? audio.duration : seekableDuration;
+      setMusicState((state) => ({ ...state, currentTime: audio.currentTime, duration: duration || state.duration }));
+    };
+    const played = () => setMusicState((state) => ({ ...state, playing: true }));
+    const paused = () => setMusicState((state) => ({ ...state, playing: false }));
+    audio.addEventListener("timeupdate", sync);
+    audio.addEventListener("loadedmetadata", sync);
+    audio.addEventListener("play", played);
+    audio.addEventListener("pause", paused);
+    const ended = () => changeTrack(1, true);
+    audio.addEventListener("ended", ended);
+    return () => {
+      audio.removeEventListener("timeupdate", sync);
+      audio.removeEventListener("loadedmetadata", sync);
+      audio.removeEventListener("play", played);
+      audio.removeEventListener("pause", paused);
+      audio.removeEventListener("ended", ended);
+    };
+  }, [changeTrack]);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.load();
+    setMusicState((state) => ({ ...state, currentTime: 0, duration: 0 }));
+    if (playAfterTrackChange.current) audio.play().catch(() => {});
+    playAfterTrackChange.current = false;
+  }, [trackIndex]);
+
+  const music = {
+    ...musicState,
+    track: NCS_TRACKS[trackIndex],
+    tracks: NCS_TRACKS,
+    shuffle,
+    saved: savedTracks.includes(NCS_TRACKS[trackIndex].title),
+    query: musicQuery,
+    toggle: () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (audio.paused) audio.play().catch(() => {});
+      else audio.pause();
+    },
+    seek: (time) => {
+      const audio = audioRef.current;
+      if (!audio || !Number.isFinite(time)) return;
+      const maximum = audio.seekable.length ? audio.seekable.end(audio.seekable.length - 1) : musicState.duration;
+      audio.currentTime = Math.max(0, Math.min(time, maximum || time));
+      setMusicState((state) => ({ ...state, currentTime: audio.currentTime }));
+    },
+    previous: () => changeTrack(-1, musicState.playing),
+    next: () => changeTrack(1, musicState.playing),
+    select: (index) => {
+      if (index === trackIndex) {
+        if (audioRef.current?.paused) audioRef.current.play().catch(() => {});
+        return;
+      }
+      playAfterTrackChange.current = true;
+      setTrackIndex(index);
+    },
+    toggleShuffle: () => setShuffle((value) => !value),
+    toggleSaved: () => setSavedTracks((tracks) => tracks.includes(NCS_TRACKS[trackIndex].title) ? tracks.filter((title) => title !== NCS_TRACKS[trackIndex].title) : [...tracks, NCS_TRACKS[trackIndex].title]),
+    volume,
+    muted,
+    setVolume: (nextVolume) => {
+      const next = Math.max(0, Math.min(1, nextVolume));
+      setVolumeState(next);
+      setMuted(false);
+      if (audioRef.current) { audioRef.current.volume = next; audioRef.current.muted = false; }
+    },
+    toggleMute: () => setMuted((value) => {
+      if (audioRef.current) audioRef.current.muted = !value;
+      return !value;
+    }),
+    setQuery: setMusicQuery,
+  };
 
   const onReady = useMemo(() => (nextBounds) => setBounds(nextBounds), []);
   const resetView = () => {
@@ -245,6 +449,7 @@ export default function StudyGirlPage() {
 
   return (
     <main className="study-page">
+      <audio ref={audioRef} src={NCS_TRACKS[trackIndex].url} preload="metadata" />
       {/* near:0.01 with far:5000 on a model hundreds of units wide wrecked depth
           precision and made surfaces z-fight. The camera never gets closer than
           110 units, so a near plane of 1 is plenty. */}
@@ -277,7 +482,9 @@ export default function StudyGirlPage() {
         <button type="button" onClick={resetView}>Reset view</button>
       </aside>
       <button className="study-back" type="button" onClick={() => window.history.back()}>← Back</button>
-      {laptopOpen && <LaptopOS onClose={() => setLaptopOpen(false)} />}
+      {!laptopOpen && <RoomClockWidget />}
+      {musicState.playing && !laptopOpen && <div className="room-music-widget"><MusicControls music={music} compact /></div>}
+      {laptopOpen && <LaptopOS onClose={() => setLaptopOpen(false)} music={music} />}
     </main>
   );
 }
