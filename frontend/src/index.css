@@ -16,6 +16,24 @@ body {
   overflow-x: hidden;
 }
 
+.study-page { position: relative; width: 100vw; height: 100vh; overflow: hidden; color: #f7eee4; background: #10151c; }
+.study-page canvas { display: block; }
+.study-hud { position: fixed; z-index: 3; top: 1.3rem; left: 1.4rem; display: flex; align-items: flex-start; justify-content: space-between; width: min(36rem, calc(100vw - 2.8rem)); pointer-events: none; }
+.study-hud h1 { margin: .2rem 0 .1rem; color: #fff7ea; font: 700 clamp(1.4rem, 3vw, 2.15rem)/1 Georgia, serif; text-shadow: 0 2px 14px #0a0b10; }
+.study-hud p { margin: 0; color: rgba(255, 241, 220, .74); font-size: .74rem; }
+.study-kicker { color: #c9a77b; font-size: .62rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.study-status { display: grid; gap: .18rem; min-width: 5rem; padding: .55rem .7rem; border: 1px solid rgba(245, 194, 122, .28); border-radius: 8px; background: rgba(19, 22, 27, .68); text-align: right; backdrop-filter: blur(8px); }
+.study-status strong { color: #f5c47f; font: 700 .75rem Georgia, serif; }
+.study-status span { color: rgba(255, 246, 229, .68); font-size: .62rem; }
+.study-controls { position: fixed; z-index: 3; right: 1.4rem; bottom: 1.35rem; display: grid; gap: .42rem; min-width: 13rem; padding: .85rem 1rem; border: 1px solid rgba(245, 194, 122, .3); border-radius: 10px; color: rgba(255, 242, 225, .84); background: rgba(18, 21, 26, .74); box-shadow: 0 16px 40px rgba(0,0,0,.28); backdrop-filter: blur(10px); font-size: .65rem; }
+.study-controls strong { color: #f5c47f; font: 700 .85rem Georgia, serif; }
+.study-controls kbd { display: inline-grid; min-width: 1.25rem; min-height: 1.25rem; margin-right: .22rem; place-items: center; border: 1px solid rgba(255,255,255,.22); border-radius: 4px; color: #fff4df; background: rgba(255,255,255,.08); font-size: .58rem; }
+.study-controls button, .study-back { border: 1px solid rgba(245, 194, 122, .42); border-radius: 5px; color: #241b13; background: #e7bd7b; font: 700 .67rem Trebuchet MS, sans-serif; cursor: pointer; }
+.study-controls button { justify-self: start; margin-top: .25rem; padding: .38rem .6rem; }
+.study-back { position: fixed; z-index: 4; top: 1.4rem; right: 1.4rem; padding: .55rem .78rem; }
+.study-loader { padding: .65rem .9rem; border-radius: 8px; color: #fff4df; background: rgba(17, 20, 26, .84); font-size: .72rem; white-space: nowrap; }
+@media (max-width: 720px) { .study-hud { width: calc(100vw - 2rem); left: 1rem; top: 1rem; } .study-controls { right: 1rem; bottom: 1rem; } .study-back { top: 1rem; right: 1rem; } }
+
 /* Base custom utility for glassmorphism */
 .glass-panel {
   background: var(--color-glass);
