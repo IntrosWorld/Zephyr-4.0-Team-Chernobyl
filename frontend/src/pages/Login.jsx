@@ -8,7 +8,7 @@ export default function Login() {
       <SplineScene />
 
       {/* Centered floating auth card */}
-      <div className="absolute inset-0 z-20 flex items-center justify-center p-6">
+      <div className="absolute inset-0 z-20 flex items-center justify-center p-6 pointer-events-none">
         <AuthForm type="login" />
       </div>
     </div>

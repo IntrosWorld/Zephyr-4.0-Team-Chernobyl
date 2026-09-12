@@ -43,7 +43,7 @@ export default function AuthForm({ type }) {
 
       <div
         ref={formRef}
-        className="relative z-20 flex flex-col items-center gap-5 p-8 rounded-3xl"
+        className="relative z-20 flex flex-col items-center gap-5 p-8 rounded-3xl pointer-events-auto"
         style={{
           background: "rgba(10, 10, 20, 0.65)",
           backdropFilter: "blur(24px)",
