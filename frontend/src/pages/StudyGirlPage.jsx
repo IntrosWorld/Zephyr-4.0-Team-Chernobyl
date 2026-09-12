@@ -81,7 +81,35 @@ function WindowSky() {
   );
 }
 
-function OrbitCamera({ controls, bounds }) {
+function LaptopHotspot({ onOpen, disabled }) {
+  const [hovered, setHovered] = useState(false);
+
+  useEffect(() => {
+    if (!hovered || disabled) return undefined;
+    document.body.style.cursor = "pointer";
+    return () => { document.body.style.cursor = ""; };
+  }, [disabled, hovered]);
+
+  return (
+    <group position={[-42, 184, 118]} rotation={[0, -0.08, 0]}>
+      <mesh
+        onClick={(event) => { event.stopPropagation(); if (!disabled) onOpen(); }}
+        onPointerOver={(event) => { event.stopPropagation(); setHovered(true); }}
+        onPointerOut={() => setHovered(false)}
+      >
+        <boxGeometry args={[92, 86, 68]} />
+        <meshBasicMaterial transparent opacity={hovered && !disabled ? 0.12 : 0} color="#7de7ff" depthWrite={false} />
+      </mesh>
+      {hovered && !disabled && (
+        <Html center position={[0, 64, 0]} style={{ pointerEvents: "none" }}>
+          <div className="laptop-prompt">Open laptop</div>
+        </Html>
+      )}
+    </group>
+  );
+}
+
+function OrbitCamera({ controls, bounds, enabled }) {
   const { camera } = useThree();
   const initialized = useRef(false);
 
@@ -93,7 +121,7 @@ function OrbitCamera({ controls, bounds }) {
     controls.current?.saveState();
     initialized.current = true;
   }, [bounds, camera]);
-  return <OrbitControls ref={controls} enablePan enableDamping dampingFactor={0.08} minDistance={110} maxDistance={2600} minPolarAngle={0.45} maxPolarAngle={Math.PI - 0.45} screenSpacePanning />;
+  return <OrbitControls ref={controls} enabled={enabled} enablePan enableDamping dampingFactor={0.08} minDistance={110} maxDistance={2600} minPolarAngle={0.45} maxPolarAngle={Math.PI - 0.45} screenSpacePanning />;
 }
 
 function Loader() {
@@ -102,9 +130,100 @@ function Loader() {
   return <Html center><div className="study-loader">Loading room {Math.round(progress)}%</div></Html>;
 }
 
+const laptopApps = [
+  { id: "browser", icon: "◎", label: "Browser" },
+  { id: "notes", icon: "▤", label: "Notes" },
+  { id: "files", icon: "▱", label: "Files" },
+];
+
+function LaptopOS({ onClose }) {
+  const [activeApp, setActiveApp] = useState("browser");
+  const [fullscreen, setFullscreen] = useState(false);
+  const [address, setAddress] = useState("zephyr://home");
+  const [page, setPage] = useState("zephyr://home");
+  const [notes, setNotes] = useState("Focus for today:\n• Finish the 3D study room\n• Review quests\n• Take a real break");
+  const openAddress = (event) => {
+    event.preventDefault();
+    const next = address.trim();
+    if (!next) return;
+    setPage(next.includes("://") ? next : `https://${next}`);
+  };
+
+  return (
+    <section className={`laptop-os ${fullscreen ? "is-fullscreen" : "is-windowed"}`} role="dialog" aria-modal="true" aria-label="Study laptop">
+      <div className="os-wallpaper" />
+      <header className="os-topbar">
+        <strong>Zephyr OS</strong>
+        <span>Study mode · Online</span>
+        <div className="os-actions">
+          <button type="button" onClick={() => setFullscreen((value) => !value)}>{fullscreen ? "Windowed" : "Full screen"}</button>
+          <button type="button" onClick={onClose} aria-label="Return to room">Return to room</button>
+        </div>
+      </header>
+
+      <nav className="os-desktop-icons" aria-label="Applications">
+        {laptopApps.map((app) => (
+          <button key={app.id} type="button" onDoubleClick={() => setActiveApp(app.id)} onClick={() => setActiveApp(app.id)}>
+            <span>{app.icon}</span>{app.label}
+          </button>
+        ))}
+      </nav>
+
+      <article className="os-window">
+        <header className="os-windowbar">
+          <div className="os-dots"><i /><i /><i /></div>
+          <strong>{laptopApps.find((app) => app.id === activeApp)?.label}</strong>
+          <button type="button" onClick={() => setActiveApp("")} aria-label="Close application">×</button>
+        </header>
+
+        {activeApp === "browser" && (
+          <div className="os-browser">
+            <form onSubmit={openAddress}>
+              <button type="button" onClick={() => { setAddress("zephyr://home"); setPage("zephyr://home"); }}>⌂</button>
+              <input aria-label="Web address" value={address} onChange={(event) => setAddress(event.target.value)} />
+              <button type="submit">Go</button>
+            </form>
+            {page === "zephyr://home" ? (
+              <div className="os-home">
+                <span>YOUR QUIET CORNER</span>
+                <h2>What will you explore today?</h2>
+                <p>Type a web address above, or open one of your study spaces.</p>
+                <div>
+                  <button type="button" onClick={() => { setAddress("https://wikipedia.org"); setPage("https://wikipedia.org"); }}>Wikipedia</button>
+                  <button type="button" onClick={() => { setAddress("https://example.com"); setPage("https://example.com"); }}>Reading</button>
+                </div>
+              </div>
+            ) : <iframe title="Zephyr browser" src={page} sandbox="allow-forms allow-scripts allow-same-origin allow-popups" />}
+          </div>
+        )}
+
+        {activeApp === "notes" && (
+          <div className="os-notes"><label htmlFor="study-notes">Study notes</label><textarea id="study-notes" value={notes} onChange={(event) => setNotes(event.target.value)} /></div>
+        )}
+
+        {activeApp === "files" && (
+          <div className="os-files">
+            <h2>My files</h2>
+            <div><span>▤</span><strong>Quest journal</strong><small>Updated today</small></div>
+            <div><span>▧</span><strong>Study references</strong><small>12 items</small></div>
+            <div><span>♫</span><strong>Lo-Fi collection</strong><small>28 tracks</small></div>
+          </div>
+        )}
+
+        {!activeApp && <div className="os-empty">Choose an application from the desktop or dock.</div>}
+      </article>
+
+      <footer className="os-dock">
+        {laptopApps.map((app) => <button key={app.id} type="button" className={activeApp === app.id ? "active" : ""} onClick={() => setActiveApp(app.id)} title={app.label}>{app.icon}</button>)}
+      </footer>
+    </section>
+  );
+}
+
 export default function StudyGirlPage() {
   const controls = useRef(null);
   const [bounds, setBounds] = useState(null);
+  const [laptopOpen, setLaptopOpen] = useState(false);
 
   const onReady = useMemo(() => (nextBounds) => setBounds(nextBounds), []);
   const resetView = () => {
@@ -129,8 +248,9 @@ export default function StudyGirlPage() {
         <Suspense fallback={<Loader />}>
           <WindowSky />
           <StudyGirlModel onReady={onReady} />
+          <LaptopHotspot onOpen={() => setLaptopOpen(true)} disabled={laptopOpen} />
         </Suspense>
-        <OrbitCamera controls={controls} bounds={bounds} />
+        <OrbitCamera controls={controls} bounds={bounds} enabled={!laptopOpen} />
       </Canvas>
 
       <header className="study-hud">
@@ -145,6 +265,7 @@ export default function StudyGirlPage() {
         <button type="button" onClick={resetView}>Reset view</button>
       </aside>
       <button className="study-back" type="button" onClick={() => window.history.back()}>← Back</button>
+      {laptopOpen && <LaptopOS onClose={() => setLaptopOpen(false)} />}
     </main>
   );
 }
