@@ -42,14 +42,14 @@
   <tr>
     <td align="center">
       <img
-        src="public/login.png"
+        src="frontend/public/login.png"
         alt="Habitify landing page"
         width="420"
       />
     </td>
     <td align="center">
       <img
-        src="public/lofi.png"
+        src="frontend/public/lofi.png"
         alt="Habitify dashboard"
         width="420"
       />
@@ -58,14 +58,14 @@
   <tr>
     <td align="center">
       <img
-        src="public/journal.png"
+        src="frontend/public/journal.png"
         alt="Habitify habit tracking"
         width="420"
       />
     </td>
     <td align="center">
       <img
-        src="public/quest.png"
+        src="frontend/public/quest.png"
         alt="Habitify coding integrations"
         width="420"
       />
