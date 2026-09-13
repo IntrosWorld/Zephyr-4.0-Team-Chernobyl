@@ -16,5 +16,6 @@ A habit tracker that turns your daily habits, todos, and coding activity into an
 ## Features
 
 - **Auth** - Firebase Authentication (email/password + Google) on the frontend, verified on the backend via Firebase Admin.
-- **Tasks** - Habits, dailies, and todos, stored per-user in Firestore (`backend/src/controllers/taskController.js`).
+- **Tasks** - Legacy one-off habit/daily/todo items with a single `completed` flag, stored per-user in Firestore (`backend/src/controllers/taskController.js`).
+- **Habit tracker** - Recurring habits with daily completion logging, current/longest streaks, a weekly grid, and a 90-day heatmap. Confetti fires on each completion (and again if it's the last habit for the day). See `backend/README.md` for the `/api/habits` and `/api/logs` endpoints.
 - **GitHub & LeetCode tracking** - Users save their GitHub/LeetCode usernames once, and the dashboard pulls live public stats (repos, contribution streak, problems solved, ranking) on each visit. Details and setup in `backend/README.md`.

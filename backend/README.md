@@ -35,10 +35,20 @@ The server will start on port `5000` (or whatever is specified in `.env`).
 
 - `GET /api/health` - Basic health check endpoint.
 - `GET /api/user/me` - (Protected) Returns verified user information from the provided Firebase Bearer token.
-- `GET /api/tasks` / `POST /api/tasks` / `PUT /api/tasks/:id` / `DELETE /api/tasks/:id` - (Protected) CRUD for a user's habits/dailies/todos.
+- `GET /api/tasks` / `POST /api/tasks` / `PUT /api/tasks/:id` / `DELETE /api/tasks/:id` - (Protected) Legacy generic CRUD for one-off habit/daily/todo items with a single `completed` flag. Superseded by `/api/habits` + `/api/logs` below for anything that needs streaks or history.
+- `GET /api/habits` / `POST /api/habits` / `PUT /api/habits/:id` / `PUT /api/habits/:id/archive` / `DELETE /api/habits/:id` - (Protected) CRUD for a user's recurring habits.
+- `GET /api/logs/today` / `GET /api/logs/range?start&end` / `GET /api/logs/heatmap` / `POST /api/logs` / `DELETE /api/logs` - (Protected) Per-day completion logs for habits: today's completions, a date-range slice (e.g. for a weekly grid), a 90-day daily count series (for a heatmap), and marking/unmarking a habit done on a given date.
 - `PUT /api/integrations` - (Protected) Save the GitHub and/or LeetCode usernames to track. Body: `{ "github": "octocat", "leetcode": "someuser" }`. Either field can be omitted to leave it unchanged, or set to `""`/`null` to clear it.
 - `GET /api/integrations/github` - (Protected) Fetches live stats for the user's saved GitHub username: public repo count, followers, and (if `GITHUB_TOKEN` is set) total contributions and current streak.
 - `GET /api/integrations/leetcode` - (Protected) Fetches live stats for the user's saved LeetCode username: total/easy/medium/hard problems solved, ranking, and current streak.
+
+### Habits & logs
+
+Habits (`src/controllers/habitController.js`) and their per-day completions (`src/controllers/logController.js`) are stored as two separate Firestore collections, `habits` and `habitLogs`, rather than reusing the older `tasks` collection — a habit needs a full history of which days it was done to compute streaks and the heatmap, which a single `completed` boolean can't represent.
+
+- Deleting a habit cascades to delete all of its logs (one batched Firestore write).
+- `GET /api/logs/range` and `GET /api/logs/heatmap` filter in memory over all of a user's logs rather than issuing a Firestore range query, so no composite index is required. This is fine at habit-tracker scale (one user's logs, not a shared dataset).
+- The frontend computes streaks itself from the raw log dates (`frontend/src/utils/dateHelpers.js`) rather than the backend precomputing them, since the "current" streak depends on the caller's notion of "today."
 
 ### GitHub & LeetCode integrations
 

@@ -39,3 +39,43 @@ export function getGithubStats(user) {
 export function getLeetcodeStats(user) {
   return authedFetch("/integrations/leetcode", user);
 }
+
+export function getHabits(user) {
+  return authedFetch("/habits", user);
+}
+
+export function createHabit(user, habit) {
+  return authedFetch("/habits", user, { method: "POST", body: JSON.stringify(habit) });
+}
+
+export function updateHabit(user, id, updates) {
+  return authedFetch(`/habits/${id}`, user, { method: "PUT", body: JSON.stringify(updates) });
+}
+
+export function archiveHabit(user, id) {
+  return authedFetch(`/habits/${id}/archive`, user, { method: "PUT" });
+}
+
+export function deleteHabit(user, id) {
+  return authedFetch(`/habits/${id}`, user, { method: "DELETE" });
+}
+
+export function getTodayLogs(user) {
+  return authedFetch("/logs/today", user);
+}
+
+export function getRangeLogs(user, start, end) {
+  return authedFetch(`/logs/range?start=${start}&end=${end}`, user);
+}
+
+export function getHeatmapLogs(user) {
+  return authedFetch("/logs/heatmap", user);
+}
+
+export function createLog(user, habitId, date) {
+  return authedFetch("/logs", user, { method: "POST", body: JSON.stringify({ habitId, date }) });
+}
+
+export function deleteLog(user, habitId, date) {
+  return authedFetch("/logs", user, { method: "DELETE", body: JSON.stringify({ habitId, date }) });
+}
