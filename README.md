@@ -25,14 +25,6 @@
 ## Preview
 
 <p align="center">
-  <img
-    src="frontend/public/logo.png"
-    alt="Habitify Logo"
-    width="150"
-  />
-</p>
-
-<p align="center">
   <strong>Habitify — Level Up Your Life, One Habit at a Time</strong>
 </p>
 
@@ -82,11 +74,7 @@
 
 
 ### Demo
-
-* **Live Demo:** `YOUR_LIVE_DEMO_URL`
 * **Demo Video:** `YOUR_DEMO_VIDEO_URL`
-* **Presentation:** `YOUR_PRESENTATION_URL`
-
 ---
 
 ## About Habitify
