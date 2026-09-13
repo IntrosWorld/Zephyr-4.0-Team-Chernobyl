@@ -1,6 +1,6 @@
 export default function SplineScene() {
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#050505]">
+    <div className="absolute inset-0 overflow-hidden bg-[#050505] cursor-pointer">
       <div
         className="absolute inset-0"
         style={{
@@ -12,6 +12,9 @@ export default function SplineScene() {
           title="Googly Eyes"
           className="w-full h-full border-0"
           allow="autoplay; fullscreen"
+          style={{
+            cursor: "pointer",
+          }}
         />
       </div>
 

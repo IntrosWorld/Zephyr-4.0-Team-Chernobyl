@@ -8,6 +8,9 @@ const { initFirebaseAdmin } = require("./config/firebaseAdmin");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const taskRoutes = require("./routes/taskRoutes");
+const habitRoutes = require("./routes/habitRoutes");
+const logRoutes = require("./routes/logRoutes");
+const integrationRoutes = require("./routes/integrationRoutes");
 const { errorHandler, notFoundHandler } = require("./middleware/errorMiddleware");
 
 // Initialize Firebase Admin SDK
@@ -19,16 +22,24 @@ const app = express();
 app.use(helmet());
 
 // Rate Limiting
+// Local dev traffic (page loads, HMR re-fetches, repeated manual testing)
+// easily exceeds a production-sized budget on one IP, so it's much looser
+// outside of NODE_ENV=production rather than tripping constantly in dev.
+const isProduction = process.env.NODE_ENV === "production";
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: isProduction ? 100 : 2000, // limit each IP to N requests per windowMs
   message: "Too many requests from this IP, please try again later."
 });
 app.use("/api/", limiter);
 
 // CORS Config
+// Reflects whatever origin the request came from instead of one hardcoded
+// port, so any teammate's dev server (different port, different machine)
+// can talk to this backend. Protected routes still require a valid Firebase
+// ID token, so this doesn't loosen who can actually read/write data.
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  origin: true,
   credentials: true
 }));
 
@@ -45,6 +56,9 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/habits", habitRoutes);
+app.use("/api/logs", logRoutes);
+app.use("/api/integrations", integrationRoutes);
 
 // Error Handling
 app.use(notFoundHandler);
