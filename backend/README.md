@@ -55,6 +55,14 @@ Habits (`src/controllers/habitController.js`) and their per-day completions (`sr
 
 `POST /api/logs` (marking a habit done) and `DELETE /api/logs` (undoing it) both call `applyHabitReward` (`src/services/userService.js`), which adjusts the user's `stats.xp`/`stats.gold` by a fixed amount per completion and recomputes `stats.level` as `floor(xp / 100) + 1`. This runs inside a Firestore transaction since completions can happen in quick succession. Both endpoints return the updated `stats` alongside the log so the frontend can update the level display and trigger a level-up celebration without a separate request.
 
+### Email reminders (SMTP)
+
+Each habit can have an optional `reminderTime` (`"HH:MM"`, set from the frontend habit form). `src/jobs/reminderScheduler.js` runs a `node-cron` job every minute, matches it against the server's local clock, and emails everyone whose habit is due right now via `src/services/emailService.js`.
+
+- No SMTP configuration required to run the app — `emailService.js` follows the same "optional" pattern as `GITHUB_TOKEN`: if `SMTP_HOST` isn't set, it logs one warning and no-ops instead of failing. Without it, reminders still work as in-browser notifications (`frontend/src/components/habits/RemindersCard.jsx`), just not by email.
+- For Gmail, use `smtp.gmail.com` / port `587` with an [App Password](https://myaccount.google.com/apppasswords) as `SMTP_PASS` — your normal Google password won't work here.
+- Known limitation: `reminderTime` has no timezone attached, so the scheduler assumes the server's clock matches the user's. Fine for a single-region deploy; would need a stored per-user timezone to be correct across regions.
+
 ### GitHub & LeetCode integrations
 
 Both integrations read from public data only, using the username the user saves via `PUT /api/integrations` (stored on their Firestore user doc under `integrations.github` / `integrations.leetcode`, see `src/services/userService.js`).
