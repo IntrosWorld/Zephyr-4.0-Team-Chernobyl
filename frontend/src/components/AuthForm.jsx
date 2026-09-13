@@ -59,13 +59,13 @@ export default function AuthForm({ type }) {
             className="text-5xl tracking-widest text-white leading-none"
             style={{ fontFamily: "'Bangers', cursive", letterSpacing: "0.08em" }}
           >
-            LIFE RPG
+            HABITIFY
           </h1>
           <p
             className="text-gray-400 text-xs mt-1 tracking-widest uppercase"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
-            your quest begins here
+           Complete Quests. Build Streaks. Become Better.
           </p>
         </div>
 
