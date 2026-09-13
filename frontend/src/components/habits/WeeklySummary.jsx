@@ -8,9 +8,9 @@ export default function WeeklySummary({ weekRate, activeStreaks, totalHabits }) 
   else message = "No completions logged yet this week — today's a good day to start.";
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-      <div className="text-sm font-medium mb-1">This week's summary</div>
-      <p className="text-sm text-gray-300">
+    <div className="bg-[#c9ede0] border border-[#9ed9c4] rounded-xl p-5">
+      <div className="text-sm font-medium text-[#0d2b24] mb-1">This week's summary</div>
+      <p className="text-sm text-[#3f6359]">
         {message} You completed {weekRate}% of your habits across {activeStreaks} active streak
         {activeStreaks === 1 ? "" : "s"}.
       </p>

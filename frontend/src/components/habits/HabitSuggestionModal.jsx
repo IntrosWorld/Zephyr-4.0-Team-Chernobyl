@@ -1,4 +1,5 @@
 import Modal from "./Modal";
+import Mascot from "./Mascot";
 import { HabitIcon } from "../../utils/habitIcons";
 
 // Static curated list — no AI involved, kept simple until a real suggestion
@@ -15,6 +16,9 @@ const SUGGESTIONS = [
 export default function HabitSuggestionModal({ open, onClose, onAccept }) {
   return (
     <Modal open={open} onClose={onClose} title="Habit ideas" maxWidth="max-w-lg">
+      <div className="flex justify-center mb-4">
+        <Mascot pose="play" size={80} />
+      </div>
       <div className="space-y-2">
         {SUGGESTIONS.map((s) => (
           <button
@@ -23,14 +27,14 @@ export default function HabitSuggestionModal({ open, onClose, onAccept }) {
               onAccept(s);
               onClose();
             }}
-            className="w-full flex items-center gap-3 text-left bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-colors"
+            className="w-full flex items-center gap-3 text-left bg-[#c9ede0] hover:bg-[#bfe8d8] border border-[#9ed9c4] rounded-xl p-3 transition-colors"
           >
-            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-300 shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[#a8ddc7] flex items-center justify-center text-[#159c86] shrink-0">
               <HabitIcon icon={s.icon} size={16} />
             </div>
             <div className="min-w-0">
-              <div className="font-medium truncate">{s.name}</div>
-              <div className="text-xs text-gray-400 truncate">{s.description}</div>
+              <div className="font-medium text-[#0d2b24] truncate">{s.name}</div>
+              <div className="text-xs text-[#6b9285] truncate">{s.description}</div>
             </div>
           </button>
         ))}

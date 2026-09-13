@@ -16,5 +16,5 @@ function dayOfYear() {
 
 export default function MorningMotivation() {
   const quote = QUOTES[dayOfYear() % QUOTES.length];
-  return <p className="text-sm text-gray-400 italic">{quote}</p>;
+  return <p className="text-sm text-[#7fae9f] italic">{quote}</p>;
 }

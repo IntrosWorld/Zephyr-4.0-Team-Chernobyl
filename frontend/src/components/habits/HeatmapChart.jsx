@@ -1,10 +1,14 @@
-function levelClass(count, max) {
-  if (!count) return "bg-white/5";
+// Teal ramp from the light card surface up to the deep brand teal,
+// so a busier day reads as a richer shade rather than a different hue.
+const HEAT_LEVELS = ["#bfe8d8", "#a3ddc9", "#5cc2a3", "#159c86", "#0d6b5a"];
+
+function levelColor(count, max) {
+  if (!count) return HEAT_LEVELS[0];
   const ratio = count / Math.max(1, max);
-  if (ratio < 0.25) return "bg-emerald-500/25";
-  if (ratio < 0.5) return "bg-emerald-500/50";
-  if (ratio < 0.85) return "bg-emerald-500/75";
-  return "bg-emerald-500";
+  if (ratio < 0.25) return HEAT_LEVELS[1];
+  if (ratio < 0.5) return HEAT_LEVELS[2];
+  if (ratio < 0.85) return HEAT_LEVELS[3];
+  return HEAT_LEVELS[4];
 }
 
 export default function HeatmapChart({ data = [] }) {
@@ -30,9 +34,9 @@ export default function HeatmapChart({ data = [] }) {
   }
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-5 h-full">
-      <div className="text-sm font-medium mb-1">Consistency</div>
-      <div className="text-xs text-gray-400 mb-4">{total} completions in the last 90 days</div>
+    <div className="bg-[#c9ede0] border border-[#9ed9c4] rounded-xl p-5">
+      <div className="text-sm font-medium text-[#0d2b24] mb-1">Consistency</div>
+      <div className="text-xs text-[#6b9285] mb-4">{total} completions in the last 90 days</div>
 
       <div className="overflow-x-auto">
         <div className="flex gap-1">
@@ -42,7 +46,8 @@ export default function HeatmapChart({ data = [] }) {
                 d ? (
                   <div
                     key={ri}
-                    className={`w-3.5 h-3.5 rounded-sm ${levelClass(d.count, max)}`}
+                    className="w-3.5 h-3.5 rounded-sm"
+                    style={{ background: levelColor(d.count, max) }}
                     title={`${d.date} — ${d.count} completion${d.count === 1 ? "" : "s"}`}
                   />
                 ) : (
@@ -52,6 +57,14 @@ export default function HeatmapChart({ data = [] }) {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="flex items-center gap-1.5 text-xs text-[#a3c7bb] mt-3">
+        Less
+        {HEAT_LEVELS.map((c) => (
+          <span key={c} className="w-3 h-3 rounded-sm" style={{ background: c }} />
+        ))}
+        More
       </div>
     </div>
   );
