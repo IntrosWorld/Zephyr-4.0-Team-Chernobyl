@@ -1,6 +1,9 @@
 const { getDb } = require("../config/firebaseAdmin");
+const { applyHabitReward } = require("../services/userService");
 
 const HEATMAP_DAYS = 90;
+const XP_PER_COMPLETION = 10;
+const GOLD_PER_COMPLETION = 5;
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -106,7 +109,9 @@ const createLog = async (req, res, next) => {
     };
 
     const docRef = await getDb().collection("habitLogs").add(newLog);
-    res.status(201).json({ id: docRef.id, ...newLog });
+    const stats = await applyHabitReward(uid, XP_PER_COMPLETION, GOLD_PER_COMPLETION);
+
+    res.status(201).json({ id: docRef.id, ...newLog, stats });
   } catch (error) {
     next(error);
   }
@@ -133,7 +138,11 @@ const deleteLog = async (req, res, next) => {
     snapshot.forEach((doc) => batch.delete(doc.ref));
     await batch.commit();
 
-    res.status(200).json({ message: "Log removed" });
+    const stats = snapshot.empty
+      ? undefined
+      : await applyHabitReward(uid, -XP_PER_COMPLETION, -GOLD_PER_COMPLETION);
+
+    res.status(200).json({ message: "Log removed", stats });
   } catch (error) {
     next(error);
   }
