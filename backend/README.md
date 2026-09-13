@@ -1,6 +1,6 @@
-# Life RPG Backend
+# Habitify Backend
 
-This is the Express backend for the Life RPG application, featuring Firebase Admin authentication token verification.
+This is the Express backend for Habitify, featuring Firebase Admin authentication token verification.
 
 ## Setup Instructions
 
@@ -13,7 +13,7 @@ This is the Express backend for the Life RPG application, featuring Firebase Adm
 To verify tokens from the frontend, the backend needs a Firebase Service Account key.
 
 1. Go to your [Firebase Console](https://console.firebase.google.com/).
-2. Select your project: `zephyr-e7310`.
+2. Select your project: `habitify-101d7`.
 3. Go to **Project Settings** (gear icon) -> **Service accounts**.
 4. Click **Generate new private key**. This will download a JSON file.
 5. Open the JSON file and copy the values into your `.env` file:
@@ -49,6 +49,11 @@ Habits (`src/controllers/habitController.js`) and their per-day completions (`sr
 - Deleting a habit cascades to delete all of its logs (one batched Firestore write).
 - `GET /api/logs/range` and `GET /api/logs/heatmap` filter in memory over all of a user's logs rather than issuing a Firestore range query, so no composite index is required. This is fine at habit-tracker scale (one user's logs, not a shared dataset).
 - The frontend computes streaks itself from the raw log dates (`frontend/src/utils/dateHelpers.js`) rather than the backend precomputing them, since the "current" streak depends on the caller's notion of "today."
+- Each habit stores a `color` (hex string, used for its checkmark in the weekly grid) alongside its `icon`. If the client doesn't send one, `POST /api/habits` assigns the next color in a fixed rotation (`src/utils/habitColors.js`) so habits stay visually distinct.
+
+### Rewards (XP, gold, levels)
+
+`POST /api/logs` (marking a habit done) and `DELETE /api/logs` (undoing it) both call `applyHabitReward` (`src/services/userService.js`), which adjusts the user's `stats.xp`/`stats.gold` by a fixed amount per completion and recomputes `stats.level` as `floor(xp / 100) + 1`. This runs inside a Firestore transaction since completions can happen in quick succession. Both endpoints return the updated `stats` alongside the log so the frontend can update the level display and trigger a level-up celebration without a separate request.
 
 ### GitHub & LeetCode integrations
 

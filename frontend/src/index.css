@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', system-ui, sans-serif;
-  
+  --font-sans: 'Short Stack', 'Inter', system-ui, sans-serif;
+
   --color-glass: rgba(255, 255, 255, 0.05);
   --color-glass-border: rgba(255, 255, 255, 0.1);
 }
@@ -12,7 +12,7 @@ body {
   padding: 0;
   background-color: #050505;
   color: #f3f4f6;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Short Stack', 'Inter', system-ui, sans-serif;
   overflow-x: hidden;
 }
 
