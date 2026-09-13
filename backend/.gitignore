@@ -44,3 +44,6 @@ coverage/
 
 # Misc
 *.swp
+
+# Firebase Admin SDK
+zephyr-e7310-firebase-adminsdk-fbsvc-a02992ee3e.json
