@@ -1,4 +1,5 @@
 const { getDb } = require("../config/firebaseAdmin");
+const { colorForIndex } = require("../utils/habitColors");
 
 // Get all active (non-archived) habits for the authenticated user
 const getHabits = async (req, res, next) => {
@@ -23,11 +24,14 @@ const getHabits = async (req, res, next) => {
 const createHabit = async (req, res, next) => {
   try {
     const { uid } = req.user;
-    const { name, description, category, icon, frequency, targetDays } = req.body;
+    const { name, description, category, icon, color, frequency, targetDays, reminderTime } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: "Habit name is required" });
     }
+
+    const db = getDb();
+    const existingCount = (await db.collection("habits").where("userId", "==", uid).get()).size;
 
     const newHabit = {
       userId: uid,
@@ -35,14 +39,16 @@ const createHabit = async (req, res, next) => {
       description: description || "",
       category: category || "general",
       icon: icon || "sparkles",
+      color: color || colorForIndex(existingCount),
       frequency: frequency || "daily",
       targetDays: targetDays || 7,
+      reminderTime: reminderTime || null,
       isArchived: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    const docRef = await getDb().collection("habits").add(newHabit);
+    const docRef = await db.collection("habits").add(newHabit);
     res.status(201).json({ id: docRef.id, ...newHabit });
   } catch (error) {
     next(error);
