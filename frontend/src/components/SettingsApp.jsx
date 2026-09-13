@@ -188,7 +188,7 @@ function WidgetsPane() {
   if (!signedIn) return <p className="settings-guest">Sign in to customize room widgets.</p>;
 
   const resetPositions = () => {
-    ["hud", "clock", "music", "flashcards", "trackers"].forEach((id) => {
+    ["hud", "clock", "music", "flashcards", "trackers", "calendar"].forEach((id) => {
       try { localStorage.removeItem(`widget_pos_${id}`); } catch (e) {}
     });
     window.location.reload();
@@ -220,6 +220,18 @@ function WidgetsPane() {
           type="checkbox"
           checked={Boolean(settings.showTrackersWidget)}
           onChange={(e) => saveSettings({ showTrackersWidget: e.target.checked })}
+        />
+      </label>
+
+      <label className="settings-row">
+        <span>
+          Calendar widget
+          <small>Show today's and upcoming events on the 3D room (right side by default).</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={settings.showCalendarWidget !== false}
+          onChange={(e) => saveSettings({ showCalendarWidget: e.target.checked })}
         />
       </label>
 

@@ -20,6 +20,29 @@ const DIFFICULTY_XP = {
 
 const ATTRIBUTES = ["intellect", "strength", "focus", "charisma"];
 
+// Scheduled events pay by how important the user said they were.
+const IMPORTANCE_XP = {
+  low: 10,
+  medium: 25,
+  high: 50,
+  critical: 80,
+};
+
+/**
+ * Small rewards for productive activity that isn't a quest: building a deck,
+ * or opening a study/coding site from the in-room browser.
+ *
+ * `dailyCap` is the number of DISTINCT things of that kind that can pay out in
+ * one day. Combined with the productive_log primary key (which stops the same
+ * card or the same site paying twice), this keeps the drip meaningful without
+ * letting anyone grind levels by refreshing a page.
+ */
+const PRODUCTIVE_ACTIONS = {
+  flashcard_created: { xp: 3, attribute: "intellect", dailyCap: 10 },
+  study_site: { xp: 5, attribute: "focus", dailyCap: 5 },
+  coding_site: { xp: 5, attribute: "intellect", dailyCap: 5 },
+};
+
 const GOLD_RATIO = 0.6;
 
 // Consistency bonus, capped at a 1.35x multiplier on day 7 so a long streak
@@ -67,6 +90,8 @@ module.exports = {
   xpForLevel,
   applyXp,
   DIFFICULTY_XP,
+  IMPORTANCE_XP,
+  PRODUCTIVE_ACTIONS,
   ATTRIBUTES,
   GOLD_RATIO,
   streakMultiplier,

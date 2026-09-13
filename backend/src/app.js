@@ -10,6 +10,7 @@ const userRoutes = require("./routes/userRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const integrationRoutes = require("./routes/integrationRoutes");
 const deckRoutes = require("./routes/deckRoutes");
+const eventRoutes = require("./routes/eventRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const { errorHandler, notFoundHandler } = require("./middleware/errorMiddleware");
 
@@ -62,6 +63,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/integrations", integrationRoutes);
 app.use("/api/decks", deckRoutes);
+app.use("/api/events", eventRoutes);
 app.use("/api/upload", uploadRoutes);
 
 // Error Handling

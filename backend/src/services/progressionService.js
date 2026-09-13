@@ -2,6 +2,8 @@ const { withTransaction } = require("../config/db");
 const {
   applyXp,
   DIFFICULTY_XP,
+  IMPORTANCE_XP,
+  PRODUCTIVE_ACTIONS,
   ATTRIBUTES,
   GOLD_RATIO,
   streakMultiplier,
@@ -281,4 +283,189 @@ async function studyDeck(uid, deckId, cardsReviewed) {
   });
 }
 
-module.exports = { completeTask, studyDeck };
+/**
+ * Marks a scheduled calendar event done and pays out by its importance.
+ *
+ * Locks the row for the transaction, so a double-click or a replayed request
+ * can't collect twice. Event completions also feed the daily streak, exactly
+ * like quests - showing up for what you planned counts as showing up.
+ */
+async function completeEvent(uid, eventId) {
+  return withTransaction(async (client) => {
+    let event;
+    try {
+      const result = await client.query("SELECT * FROM events WHERE id = $1 FOR UPDATE", [eventId]);
+      event = result.rows[0];
+    } catch (error) {
+      if (error.code === "22P02") throw httpError("Event not found", 404);
+      throw error;
+    }
+
+    if (!event) throw httpError("Event not found", 404);
+    if (event.user_id !== uid) throw httpError("Forbidden: You don't own this event", 403);
+    if (event.completed) throw httpError("Event is already completed", 409);
+
+    const userResult = await client.query(
+      `SELECT level, xp, xp_into_level, gold, total_completed,
+              streak_current, streak_longest, last_active_day
+         FROM users WHERE uid = $1 FOR UPDATE`,
+      [uid]
+    );
+    if (!userResult.rowCount) throw httpError("User profile not found", 404);
+    const user = userResult.rows[0];
+
+    const today = dayKey();
+    const streak = nextStreak(
+      {
+        current: user.streak_current,
+        longest: user.streak_longest,
+        lastActiveDay: asDayKey(user.last_active_day),
+      },
+      today
+    );
+
+    const baseXp = IMPORTANCE_XP[event.importance] ?? IMPORTANCE_XP.medium;
+    const xpGained = Math.round(baseXp * streakMultiplier(streak.current));
+    const goldGained = Math.round(xpGained * GOLD_RATIO);
+
+    const progressed = applyXp(user.level, user.xp_into_level, xpGained);
+
+    await client.query(
+      "UPDATE events SET completed = TRUE, completed_at = now(), updated_at = now() WHERE id = $1",
+      [eventId]
+    );
+
+    const updated = await client.query(
+      `UPDATE users
+          SET level = $2, xp_into_level = $3, xp = xp + $4, gold = gold + $5,
+              total_completed = total_completed + 1,
+              streak_current = $6, streak_longest = $7, last_active_day = $8
+        WHERE uid = $1
+        RETURNING level, xp, xp_into_level, gold, total_completed`,
+      [uid, progressed.level, progressed.xpIntoLevel, xpGained, goldGained,
+       streak.current, streak.longest, today]
+    );
+
+    const attribute = ATTRIBUTES.includes(event.attribute) ? event.attribute : null;
+    const attributeResult = attribute ? await bumpAttribute(client, uid, attribute, xpGained) : null;
+
+    await client.query(
+      `INSERT INTO completions
+         (user_id, task_id, title_snapshot, attribute, difficulty,
+          xp_awarded, gold_awarded, streak_at_time, day)
+       VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $8)`,
+      [uid, event.title, attribute, event.importance, xpGained, goldGained, streak.current, today]
+    );
+
+    await client.query(
+      "INSERT INTO transactions (user_id, amount, reason) VALUES ($1, $2, $3)",
+      [uid, goldGained, `Scheduled: ${event.title}`]
+    );
+
+    const stats = updated.rows[0];
+
+    return {
+      eventId,
+      xpGained,
+      goldGained,
+      leveledUp: progressed.levelsGained > 0,
+      attribute: attributeResult,
+      stats: {
+        level: stats.level,
+        xp: stats.xp,
+        xpIntoLevel: stats.xp_into_level,
+        gold: stats.gold,
+        totalCompleted: stats.total_completed,
+      },
+      attributes: await readAttributes(client, uid),
+      streak,
+    };
+  });
+}
+
+/**
+ * Rewards a productive action that isn't a quest - adding a flashcard, or
+ * opening a study/coding site from the in-room browser.
+ *
+ * Two independent brakes:
+ *  1. the productive_log primary key (user, kind, ref, day) means the same card
+ *     or the same site pays at most once per day;
+ *  2. dailyCap limits how many DISTINCT things of that kind pay out per day.
+ *
+ * A capped or repeated action is NOT an error - it just returns xpGained: 0, so
+ * the UI can stay quiet instead of showing a failure for normal browsing.
+ */
+async function logProductive(uid, kind, ref) {
+  const action = PRODUCTIVE_ACTIONS[kind];
+  if (!action) throw httpError("Unknown activity", 400);
+
+  const cleanRef = String(ref || "").slice(0, 160).toLowerCase();
+  if (!cleanRef) throw httpError("Missing activity reference", 400);
+
+  return withTransaction(async (client) => {
+    const today = dayKey();
+
+    const used = await client.query(
+      "SELECT count(*)::int AS n FROM productive_log WHERE user_id = $1 AND kind = $2 AND day = $3",
+      [uid, kind, today]
+    );
+
+    const quiet = async (capped) => ({
+      kind,
+      xpGained: 0,
+      capped,
+      alreadyCounted: !capped,
+      attributes: await readAttributes(client, uid),
+    });
+
+    if (used.rows[0].n >= action.dailyCap) return quiet(true);
+
+    const claim = await client.query(
+      `INSERT INTO productive_log (user_id, kind, ref, day, attribute, xp_gained)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (user_id, kind, ref, day) DO NOTHING
+       RETURNING ref`,
+      [uid, kind, cleanRef, today, action.attribute, action.xp]
+    );
+
+    // Nothing inserted: this exact card/site already paid out today.
+    if (!claim.rowCount) return quiet(false);
+
+    const userResult = await client.query(
+      "SELECT level, xp_into_level FROM users WHERE uid = $1 FOR UPDATE",
+      [uid]
+    );
+    if (!userResult.rowCount) throw httpError("User profile not found", 404);
+
+    const progressed = applyXp(userResult.rows[0].level, userResult.rows[0].xp_into_level, action.xp);
+
+    const updated = await client.query(
+      `UPDATE users SET level = $2, xp_into_level = $3, xp = xp + $4
+        WHERE uid = $1
+        RETURNING level, xp, xp_into_level, gold, total_completed`,
+      [uid, progressed.level, progressed.xpIntoLevel, action.xp]
+    );
+
+    const attributeResult = await bumpAttribute(client, uid, action.attribute, action.xp);
+    const stats = updated.rows[0];
+
+    return {
+      kind,
+      xpGained: action.xp,
+      capped: false,
+      alreadyCounted: false,
+      leveledUp: progressed.levelsGained > 0,
+      attribute: attributeResult,
+      stats: {
+        level: stats.level,
+        xp: stats.xp,
+        xpIntoLevel: stats.xp_into_level,
+        gold: stats.gold,
+        totalCompleted: stats.total_completed,
+      },
+      attributes: await readAttributes(client, uid),
+    };
+  });
+}
+
+module.exports = { completeTask, studyDeck, completeEvent, logProductive };

@@ -70,6 +70,45 @@ export function getActivity(user) {
   return authedFetch("/tasks/activity", user);
 }
 
+/* -------------------------------------------------------------- schedule -- */
+
+/** Events in a date range, so the calendar only fetches the month it draws. */
+export function getEvents(user, { from, to } = {}) {
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const suffix = params.toString() ? `?${params}` : "";
+  return authedFetch(`/events${suffix}`, user);
+}
+
+export function createEvent(user, event) {
+  return authedFetch("/events", user, { method: "POST", body: JSON.stringify(event) });
+}
+
+export function updateEvent(user, id, updates) {
+  return authedFetch(`/events/${id}`, user, { method: "PUT", body: JSON.stringify(updates) });
+}
+
+export function deleteEvent(user, id) {
+  return authedFetch(`/events/${id}`, user, { method: "DELETE" });
+}
+
+export function completeEvent(user, id) {
+  return authedFetch(`/events/${id}/complete`, user, { method: "POST" });
+}
+
+/**
+ * Records a productive action (adding a card, opening a study/coding site).
+ * Repeats and capped actions come back with xpGained: 0 rather than an error,
+ * so callers can fire this freely without guarding every call site.
+ */
+export function logProductive(user, kind, ref) {
+  return authedFetch("/events/productive", user, {
+    method: "POST",
+    body: JSON.stringify({ kind, ref }),
+  });
+}
+
 /* ------------------------------------------------------------ flashcards -- */
 
 export function getDecks(user) {

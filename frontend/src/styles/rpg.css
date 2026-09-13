@@ -767,18 +767,22 @@
 .deck-card p { margin: 0; color: var(--os-muted); font-size: .64rem; }
 .deck-card small { color: var(--os-muted); font-size: .58rem; letter-spacing: .06em; text-transform: uppercase; }
 
+/* This is the deck's whole clickable body, not a small action button: it wraps
+   the title, the card count and the "studied today" flag. Styling it as a
+   padded pill crushed all three onto one line inside a coloured box. */
 .deck-open {
-  justify-self: start;
-  margin-top: .25rem;
+  display: grid;
+  justify-items: start;
+  gap: .15rem;
+  width: 100%;
+  padding: 0;
   border: 0;
-  border-radius: 8px;
-  padding: .36rem .7rem;
-  color: #fff;
-  background: var(--os-blue);
+  color: inherit;
+  background: none;
+  text-align: left;
   cursor: pointer;
-  font: 700 .64rem Inter, system-ui, sans-serif;
 }
-.deck-open:hover { background: #35708f; }
+.deck-open:hover strong { color: var(--os-blue); }
 .deck-done { color: var(--os-green); font-size: .62rem; font-weight: 800; }
 .deck-tools { display: flex; gap: .3rem; justify-content: flex-end; }
 .deck-delete {
@@ -945,7 +949,10 @@
   min-height: 0;
   display: grid;
   grid-template-rows: auto;
-  align-content: center;
+  /* "safe" falls back to start-alignment once the content is taller than the
+     card. Plain `center` pushes the first row above the scroll origin, where it
+     cannot be scrolled back into view. */
+  align-content: safe center;
   gap: .8rem;
   padding: 1.4rem 1.5rem;
   overflow: auto;
@@ -963,7 +970,25 @@
 }
 .slide-card.is-still { animation: none; }
 
-.slide-face { min-width: 0; display: grid; gap: .35rem; text-align: center; }
+.slide-face { min-width: 0; display: grid; justify-items: center; gap: .35rem; text-align: center; }
+
+/* Card images are user uploads at whatever size the camera produced. Without a
+   ceiling they render at natural size and shove the question text out of the
+   card's scroll area - which read as "the answer shows but the question
+   doesn't". Height is capped in vh so a tall portrait photo can't do it either. */
+.slide-face img {
+  max-width: min(100%, 22rem);
+  max-height: 34vh;
+  border-radius: 10px;
+  object-fit: contain;
+}
+.card-faces img {
+  max-width: 7rem;
+  max-height: 5rem;
+  border-radius: 6px;
+  object-fit: contain;
+}
+.card-thumb { width: 2.4rem; height: 2.4rem; border-radius: 6px; object-fit: cover; }
 .slide-front { color: var(--os-ink-2); font: 700 clamp(1rem, 2.4vw, 1.5rem)/1.35 var(--rpg-serif); }
 .slide-answer {
   padding-top: .75rem;
@@ -1416,3 +1441,274 @@
     transition: none !important;
   }
 }
+
+/* ============================================================
+   SCHEDULE â€” importance scale, calendar app (surface B) and the
+   room calendar widget (surface A). One colour scale, two surfaces:
+   the -ink tokens are for light backgrounds, the base hue for dark.
+   ============================================================ */
+
+:root {
+  --imp-low: #94a3b8;
+  --imp-low-ink: #475569;
+  --imp-medium: #60a5fa;
+  --imp-medium-ink: #1d4ed8;
+  --imp-high: #f5b544;
+  --imp-high-ink: #b45309;
+  --imp-critical: #f87171;
+  --imp-critical-ink: #b91c1c;
+}
+
+.calendar-dot.imp-low, .imp-pill.imp-low, .calendar-event.imp-low { --imp: var(--imp-low); --imp-ink: var(--imp-low-ink); }
+.calendar-dot.imp-medium, .imp-pill.imp-medium, .calendar-event.imp-medium { --imp: var(--imp-medium); --imp-ink: var(--imp-medium-ink); }
+.calendar-dot.imp-high, .imp-pill.imp-high, .calendar-event.imp-high { --imp: var(--imp-high); --imp-ink: var(--imp-high-ink); }
+.calendar-dot.imp-critical, .imp-pill.imp-critical, .calendar-event.imp-critical { --imp: var(--imp-critical); --imp-ink: var(--imp-critical-ink); }
+.room-calendar-row.imp-low { --imp: var(--imp-low); }
+.room-calendar-row.imp-medium { --imp: var(--imp-medium); }
+.room-calendar-row.imp-high { --imp: var(--imp-high); }
+.room-calendar-row.imp-critical { --imp: var(--imp-critical); }
+
+.calendar-dot {
+  display: inline-block;
+  width: .42rem;
+  height: .42rem;
+  border-radius: 50%;
+  background: var(--imp, var(--imp-low));
+}
+.calendar-dot.is-done { opacity: .4; }
+
+/* ---------------------------------------------- calendar app (laptop) -- */
+
+.calendar-app {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: .6rem;
+  overflow: auto;
+  padding: 1rem 1.15rem 1.25rem;
+  color: var(--os-ink-2);
+  background: var(--os-tint);
+  font-family: var(--rpg-ui);
+}
+.calendar-app :focus-visible {
+  outline: 2px solid var(--os-blue);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.calendar-guest { display: block; }
+.calendar-guest h2 { margin: 0 0 .4rem; font-family: var(--rpg-serif); }
+.calendar-guest p { margin: 0; color: var(--os-muted); font-size: .82rem; }
+
+.calendar-head { display: flex; align-items: flex-end; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+.calendar-kicker { color: var(--os-muted); font-size: .58rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+.calendar-head h2 { margin: .1rem 0 0; font: 700 1.3rem var(--rpg-serif); }
+.calendar-nav { display: flex; gap: .35rem; }
+.calendar-nav button {
+  min-width: 2rem;
+  border: 1px solid var(--os-hair);
+  border-radius: 8px;
+  padding: .35rem .6rem;
+  color: var(--os-ink-2);
+  background: var(--os-card);
+  cursor: pointer;
+  font-weight: 700;
+}
+.calendar-nav button:hover { border-color: var(--os-blue); color: var(--os-blue); }
+.calendar-today { letter-spacing: .02em; }
+
+.calendar-message {
+  margin: 0;
+  border: 1px solid var(--imp-critical);
+  border-radius: 8px;
+  padding: .45rem .65rem;
+  color: var(--imp-critical-ink);
+  background: rgba(248, 113, 113, .12);
+  font-size: .74rem;
+}
+
+.calendar-layout { min-height: 0; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(15rem, 1fr); gap: .9rem; }
+.calendar-grid-wrap { min-width: 0; }
+.calendar-weekdays,
+.calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .3rem; }
+.calendar-weekdays { margin-bottom: .3rem; color: var(--os-muted); font-size: .6rem; font-weight: 800; text-align: center; text-transform: uppercase; }
+
+.calendar-cell {
+  display: grid;
+  align-content: start;
+  gap: .2rem;
+  min-height: 3.4rem;
+  border: 1px solid var(--os-hair);
+  border-radius: 9px;
+  padding: .3rem .35rem;
+  color: var(--os-ink-2);
+  background: var(--os-card);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s ease, background .15s ease;
+}
+.calendar-cell:hover { border-color: var(--os-blue); }
+.calendar-cell b { font-size: .76rem; font-weight: 700; }
+.calendar-cell.is-pad { border: 0; background: transparent; cursor: default; }
+.calendar-cell.is-today { border-color: var(--imp-critical); }
+.calendar-cell.is-today b { color: var(--imp-critical-ink); }
+.calendar-cell.is-selected { background: #e8f1f6; border-color: var(--os-blue); box-shadow: inset 0 0 0 1px var(--os-blue); }
+.calendar-cell.is-skeleton {
+  border-color: var(--os-hair);
+  background: linear-gradient(90deg, #eef3f6 25%, #e3ebef 50%, #eef3f6 75%) 0 0 / 300% 100%;
+  animation: calendar-shimmer 1.25s linear infinite;
+  cursor: default;
+}
+@keyframes calendar-shimmer { from { background-position: 150% 0; } to { background-position: -150% 0; } }
+
+.calendar-dots { display: flex; align-items: center; gap: .16rem; flex-wrap: wrap; }
+.calendar-dots em { color: var(--os-muted); font-size: .55rem; font-style: normal; }
+.calendar-hint { margin: .5rem 0 0; color: var(--os-muted); font-size: .62rem; }
+
+.calendar-panel { min-width: 0; display: grid; align-content: start; gap: .6rem; }
+.calendar-panel h3 { margin: 0; font: 700 .95rem var(--rpg-serif); }
+.calendar-day-list { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.calendar-empty { color: var(--os-muted); font-size: .74rem; }
+
+.calendar-event {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: .35rem;
+  border: 1px solid var(--os-hair);
+  border-left: 3px solid var(--imp, var(--imp-low));
+  border-radius: 9px;
+  padding: .5rem .6rem;
+  background: var(--os-card);
+}
+.calendar-event.is-busy { opacity: .6; }
+.calendar-event.is-done { opacity: .55; }
+.calendar-event.is-done .calendar-event-main strong { text-decoration: line-through; }
+.calendar-event-main { min-width: 0; display: grid; gap: .15rem; }
+.calendar-event-main strong { font-size: .82rem; }
+.calendar-event-main small { color: var(--os-muted); font-size: .65rem; }
+.calendar-event-main p { margin: .15rem 0 0; color: var(--os-muted); font-size: .68rem; }
+.calendar-event-tags { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .2rem; }
+
+.imp-pill {
+  border: 1px solid var(--imp, var(--imp-low));
+  border-radius: 999px;
+  padding: .1rem .45rem;
+  color: var(--imp-ink, var(--imp-low-ink));
+  background: rgba(255, 255, 255, .6);
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.imp-pill.imp-attr { border-color: var(--os-hair); color: var(--os-muted); background: var(--os-tint); }
+
+.calendar-event-tools { display: flex; gap: .3rem; flex-wrap: wrap; }
+.calendar-event-tools button {
+  border: 1px solid var(--os-hair);
+  border-radius: 7px;
+  padding: .24rem .55rem;
+  color: var(--os-ink-2);
+  background: var(--os-tint);
+  cursor: pointer;
+  font-size: .65rem;
+  font-weight: 700;
+}
+.calendar-event-tools button:hover { border-color: var(--os-blue); color: var(--os-blue); }
+.calendar-complete { border-color: var(--os-green) !important; color: #fff !important; background: var(--os-green) !important; }
+.calendar-complete:hover { filter: brightness(1.08); }
+.calendar-delete:hover { border-color: var(--imp-critical) !important; color: var(--imp-critical-ink) !important; }
+.calendar-event-tools button:disabled { opacity: .5; cursor: not-allowed; }
+
+.calendar-form {
+  display: grid;
+  gap: .4rem;
+  border: 1px solid var(--os-hair);
+  border-radius: 10px;
+  padding: .65rem .7rem;
+  background: var(--os-card);
+}
+.calendar-form h4 { margin: 0 0 .15rem; font: 700 .78rem var(--rpg-ui); }
+.calendar-form label { display: grid; gap: .15rem; min-width: 0; }
+.calendar-form label > span { color: var(--os-muted); font-size: .6rem; font-weight: 800; text-transform: uppercase; }
+.calendar-form input,
+.calendar-form select,
+.calendar-form textarea {
+  min-width: 0;
+  border: 1px solid var(--os-hair);
+  border-radius: 7px;
+  padding: .35rem .45rem;
+  color: var(--os-ink-2);
+  background: #fff;
+  font: inherit;
+  font-size: .74rem;
+}
+.calendar-form textarea { resize: vertical; }
+.calendar-form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); gap: .4rem; }
+.calendar-form-actions { display: flex; gap: .4rem; margin-top: .2rem; }
+.calendar-form-actions button {
+  border: 1px solid var(--os-hair);
+  border-radius: 8px;
+  padding: .4rem .7rem;
+  color: var(--os-ink-2);
+  background: var(--os-tint);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: .72rem;
+}
+.calendar-primary { border-color: var(--os-blue) !important; color: #fff !important; background: var(--os-blue) !important; }
+.calendar-form-actions button:disabled { opacity: .55; cursor: not-allowed; }
+
+/* The desktop widget's generic `div` rule is a 7-column week strip; the real
+   event rows it now renders need their own layout back. */
+.mac-calendar-widget .mac-calendar-event {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: .1rem .35rem;
+  margin-top: .3rem;
+  text-align: left;
+}
+.mac-calendar-widget .mac-calendar-event b { grid-column: 2; overflow: hidden; font-size: .62rem; text-overflow: ellipsis; white-space: nowrap; }
+.mac-calendar-widget .mac-calendar-event small { grid-column: 2; color: #77878e; font-size: .52rem; text-align: left; }
+
+/* ------------------------------------------ room calendar widget (dark) -- */
+
+.room-calendar-widget .room-widget-body { gap: .35rem; cursor: default; }
+.room-calendar-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .5rem;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-left: 3px solid var(--imp, var(--imp-low));
+  border-radius: 9px;
+  padding: .4rem .55rem;
+  background: rgba(255, 255, 255, .05);
+  transition: background .18s ease, border-color .18s ease;
+}
+.room-calendar-row:hover { background: rgba(245, 194, 122, .12); border-color: rgba(245, 194, 122, .3); }
+.room-calendar-text { min-width: 0; }
+.room-calendar-text b { display: block; overflow: hidden; color: #fff; font-size: .74rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.room-calendar-text small { color: #cbd5e1; font-size: .6rem; }
+.room-calendar-widget .room-widget-next:disabled { opacity: .5; cursor: wait; }
+.room-calendar-widget :focus-visible { outline: 2px solid var(--rpg-gold); outline-offset: 2px; border-radius: 6px; }
+
+/* The month grid has to stay usable in a narrow laptop window, so the day
+   panel drops under the grid rather than squeezing it. */
+@media (max-width: 720px) {
+  .calendar-layout { grid-template-columns: minmax(0, 1fr); }
+  .calendar-app { padding: .75rem .8rem 1rem; }
+  .calendar-cell { min-height: 2.6rem; padding: .22rem .25rem; }
+  .calendar-cell b { font-size: .68rem; }
+  .calendar-weekdays { font-size: .52rem; }
+  .calendar-event { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calendar-app, .calendar-app *,
+  .room-calendar-widget, .room-calendar-widget * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+

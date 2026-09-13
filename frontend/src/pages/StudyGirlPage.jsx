@@ -9,6 +9,10 @@ import QuestJournal from "../components/QuestJournal";
 import FlashcardsApp from "../components/FlashcardsApp";
 import StatsWidgets from "../components/StatsWidgets";
 import SettingsApp from "../components/SettingsApp";
+import CalendarApp, { compareEvents, formatTimeRange, todayKey, toDayKey } from "../components/CalendarApp";
+import RoomCalendarWidget from "../components/RoomCalendarWidget";
+import MacAppIcon from "../components/MacIcons";
+import { classifySite } from "../lib/productiveSites";
 
 const MODEL_URL = "/models/study-girl/15961a17a125467e9367ee452fd1950c_Textured.gltf";
 const NCS_TRACKS = [
@@ -146,49 +150,13 @@ function Loader() {
 const laptopApps = [
   { id: "browser", label: "Safari" },
   { id: "spotify", label: "Spotify" },
+  { id: "calendar", label: "Calendar" },
   { id: "cards", label: "Flashcards" },
   { id: "trackers", label: "Trackers" },
   { id: "notes", label: "Notes" },
   { id: "files", label: "Finder" },
   { id: "settings", label: "Settings" },
 ];
-
-function MacAppIcon({ app }) {
-  if (app.id === "cards") {
-    return (
-      <span className="mac-app-icon icon-cards" aria-hidden="true">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="6" width="13" height="14" rx="2.5" fill="rgba(255,255,255,0.25)" stroke="#ffffff" />
-          <path d="M7 3h12a2.5 2.5 0 0 1 2.5 2.5v11" stroke="#ffffff" strokeWidth="2" fill="none" />
-          <line x1="6" y1="11" x2="11" y2="11" stroke="#ffffff" strokeWidth="2" />
-          <line x1="6" y1="15" x2="9" y2="15" stroke="#ffffff" strokeWidth="2" />
-        </svg>
-      </span>
-    );
-  }
-  if (app.id === "trackers") {
-    return (
-      <span className="mac-app-icon icon-trackers" aria-hidden="true">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 3v18h18" stroke="#ffffff" />
-          <path d="M18 8l-5 6-3-3-4 4" stroke="#ffffff" strokeWidth="2.5" />
-          <circle cx="18" cy="8" r="1.8" fill="#ffffff" />
-        </svg>
-      </span>
-    );
-  }
-  if (app.id === "settings") {
-    return (
-      <span className="mac-app-icon icon-settings" aria-hidden="true">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3" fill="rgba(255,255,255,0.3)" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-        </svg>
-      </span>
-    );
-  }
-  return <span className={`mac-app-icon icon-${app.id}`} aria-hidden="true"><i /></span>;
-}
 
 function DraggableWidget({ id, defaultPos, className = "", children }) {
   const [pos, setPos] = useState(() => {
@@ -291,8 +259,21 @@ function RoomFlashcardsWidget({ onOpenApp }) {
   return (
     <div className="room-widget room-flashcard-widget">
       <header className="room-widget-header">
-        <strong>Flashcards</strong>
-        <button type="button" className="room-widget-link" onClick={() => onOpenApp("cards")}>Open App</button>
+        <strong>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f5c47f" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <path d="M7 8h10M7 12h7" />
+          </svg>
+          Flashcards
+        </strong>
+        <button type="button" className="room-widget-link" onClick={() => onOpenApp("cards")}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4, verticalAlign: "middle" }}>
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+          Open App
+        </button>
       </header>
       {deck && currentCard ? (
         <div className="room-widget-body" onClick={() => setFlipped(!flipped)}>
@@ -346,16 +327,42 @@ function RoomTrackersWidget({ onOpenApp }) {
   const ghName = profile?.integrations?.github;
   const lcName = profile?.integrations?.leetcode;
 
+  const githubSvg = (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+      <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+    </svg>
+  );
+
+  const leetcodeSvg = (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+      <path d="M16.102 17.93l-2.697 2.607a1.376 1.376 0 0 1-1.923 0L2.109 11.291a1.376 1.376 0 0 1 0-1.923l9.373-9.246a1.376 1.376 0 0 1 1.923 0l2.697 2.607c.53.522.53 1.385 0 1.907L9.629 10.33l6.473 5.693c.53.522.53 1.385 0 1.907z" />
+    </svg>
+  );
+
   return (
     <div className="room-widget room-trackers-widget">
       <header className="room-widget-header">
-        <strong>Developer Stats</strong>
-        <button type="button" className="room-widget-link" onClick={() => onOpenApp("trackers")}>Edit</button>
+        <strong>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f5c47f" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <path d="M18 20V10M12 20V4M6 20v-6" />
+          </svg>
+          Developer Stats
+        </strong>
+        <button type="button" className="room-widget-link" onClick={() => onOpenApp("trackers")}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 3, verticalAlign: "middle" }}>
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+          Edit
+        </button>
       </header>
       <div className="room-widget-body">
         {ghName ? (
           <div className="room-tracker-row" onClick={() => onOpenApp("trackers")}>
-            <span className="tracker-badge gh">GitHub</span>
+            <span className="tracker-badge gh">
+              {githubSvg}
+              GitHub
+            </span>
             <div>
               <b>@{ghName}</b>
               <small>{githubStats ? `${githubStats.publicRepos} repos · ${githubStats.currentStreak ?? 0}d streak` : "Connected"}</small>
@@ -363,14 +370,20 @@ function RoomTrackersWidget({ onOpenApp }) {
           </div>
         ) : (
           <div className="room-tracker-row empty" onClick={() => onOpenApp("trackers")}>
-            <span className="tracker-badge gh">+ GitHub</span>
+            <span className="tracker-badge gh">
+              {githubSvg}
+              + GitHub
+            </span>
             <small>Connect username</small>
           </div>
         )}
 
         {lcName ? (
           <div className="room-tracker-row" onClick={() => onOpenApp("trackers")}>
-            <span className="tracker-badge lc">LeetCode</span>
+            <span className="tracker-badge lc">
+              {leetcodeSvg}
+              LeetCode
+            </span>
             <div>
               <b>@{lcName}</b>
               <small>{leetcodeStats ? `${leetcodeStats.totalSolved} solved (${leetcodeStats.easySolved}E/${leetcodeStats.mediumSolved}M/${leetcodeStats.hardSolved}H)` : "Connected"}</small>
@@ -378,7 +391,10 @@ function RoomTrackersWidget({ onOpenApp }) {
           </div>
         ) : (
           <div className="room-tracker-row empty" onClick={() => onOpenApp("trackers")}>
-            <span className="tracker-badge lc">+ LeetCode</span>
+            <span className="tracker-badge lc">
+              {leetcodeSvg}
+              + LeetCode
+            </span>
             <small>Connect username</small>
           </div>
         )}
@@ -444,8 +460,51 @@ function MusicControls({ music, compact = false }) {
   );
 }
 
-function LaptopOS({ onClose, music }) {
-  const [activeApp, setActiveApp] = useState("browser");
+/** Desktop calendar widget — the real next couple of events, not a mockup. */
+function MacCalendarWidget({ date }) {
+  const { signedIn, currentUser } = useGame();
+  const [events, setEvents] = useState([]);
+
+  useEffect(() => {
+    if (!signedIn) return undefined;
+    let cancelled = false;
+    const from = todayKey();
+    const to = toDayKey(new Date(Date.now() + 13 * 86400000));
+    api
+      .getEvents(currentUser, { from, to })
+      .then((list) => { if (!cancelled) setEvents(Array.isArray(list) ? list : []); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [signedIn, currentUser]);
+
+  const upcoming = events.filter((e) => !e.completed).sort(compareEvents).slice(0, 2);
+  const today = todayKey();
+
+  return (
+    <section className="mac-widget mac-calendar-widget">
+      <header>
+        <strong>{date.toLocaleDateString([], { month: "long" })}</strong>
+        <b>{date.getDate()}</b>
+      </header>
+      <div>{["S", "M", "T", "W", "T", "F", "S"].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
+      {upcoming.length ? (
+        upcoming.map((event) => (
+          <div key={event.id} className="mac-calendar-event">
+            <i className={`calendar-dot imp-${event.importance}`} aria-hidden="true" />
+            <b>{event.title}</b>
+            <small>{event.scheduledFor === today ? "Today" : event.scheduledFor.slice(5)} · {formatTimeRange(event)}</small>
+          </div>
+        ))
+      ) : (
+        <p>Nothing scheduled</p>
+      )}
+    </section>
+  );
+}
+
+function LaptopOS({ onClose, music, initialApp = "browser" }) {
+  const { signedIn, currentUser, applyReward } = useGame();
+  const [activeApp, setActiveApp] = useState(initialApp);
   const [fullscreen, setFullscreen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [address, setAddress] = useState("zephyr://home");
@@ -458,11 +517,33 @@ function LaptopOS({ onClose, music }) {
     const timer = window.setInterval(() => setDesktopTime(new Date()), 1000);
     return () => window.clearInterval(timer);
   }, []);
+  /**
+   * Opening a study or coding destination earns a little XP. The server caps
+   * and de-duplicates these, so a 0-XP answer is normal and never an error -
+   * failures are swallowed so browsing can never be broken by the reward call.
+   */
+  const openPage = useCallback((raw) => {
+    const next = String(raw || "").trim();
+    if (!next) return;
+    const url = next.includes("://") ? next : `https://${next}`;
+    setAddress(url);
+    setPage(url);
+
+    if (!signedIn) return;
+    const kind = classifySite(url);
+    if (!kind) return;
+    try {
+      const host = new URL(url).hostname.toLowerCase();
+      api
+        .logProductive(currentUser, kind, host)
+        .then((reward) => { if (reward?.xpGained > 0) applyReward(reward); })
+        .catch(() => {});
+    } catch (err) { /* unparseable address: nothing to log */ }
+  }, [signedIn, currentUser, applyReward]);
+
   const openAddress = (event) => {
     event.preventDefault();
-    const next = address.trim();
-    if (!next) return;
-    setPage(next.includes("://") ? next : `https://${next}`);
+    openPage(address);
   };
   const openApp = (id) => { setActiveApp(id); setMinimized(false); };
 
@@ -492,11 +573,7 @@ function LaptopOS({ onClose, music }) {
           <AnalogClock date={desktopTime} />
           <div><time>{desktopTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time><span>{desktopTime.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</span></div>
         </section>
-        <section className="mac-widget mac-calendar-widget">
-          <header><strong>{desktopTime.toLocaleDateString([], { month: "long" })}</strong><b>{desktopTime.getDate()}</b></header>
-          <div>{["S", "M", "T", "W", "T", "F", "S"].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
-          <p>Today</p><strong>Deep work session</strong><small>10:00 – 11:30</small>
-        </section>
+        <MacCalendarWidget date={desktopTime} />
         <section className="mac-widget mac-focus-widget"><span>FOCUS</span><strong>1h 20m</strong><p>Daily goal · 67%</p><i><b /></i></section>
       </aside>
 
@@ -524,8 +601,11 @@ function LaptopOS({ onClose, music }) {
                 <h2>What will you explore today?</h2>
                 <p>Type a web address above, or open one of your study spaces.</p>
                 <div>
-                  <button type="button" onClick={() => { setAddress("https://wikipedia.org"); setPage("https://wikipedia.org"); }}>Wikipedia</button>
-                  <button type="button" onClick={() => { setAddress("https://example.com"); setPage("https://example.com"); }}>Reading</button>
+                  <button type="button" onClick={() => openPage("https://wikipedia.org")}>Wikipedia</button>
+                  <button type="button" onClick={() => openPage("https://developer.mozilla.org")}>MDN Docs</button>
+                  <button type="button" onClick={() => openPage("https://leetcode.com")}>LeetCode</button>
+                  <button type="button" onClick={() => openPage("https://khanacademy.org")}>Khan Academy</button>
+                  <button type="button" onClick={() => openPage("https://example.com")}>Reading</button>
                 </div>
               </div>
             ) : <iframe title="Zephyr browser" src={page} sandbox="allow-forms allow-scripts allow-same-origin allow-popups" />}
@@ -565,6 +645,8 @@ function LaptopOS({ onClose, music }) {
           </div>
         )}
 
+        {activeApp === "calendar" && <CalendarApp />}
+
         {activeApp === "cards" && <FlashcardsApp />}
 
         {activeApp === "trackers" && <StatsWidgets />}
@@ -587,6 +669,8 @@ function StudyGirlExperience() {
   const audioRef = useRef(null);
   const [bounds, setBounds] = useState(null);
   const [laptopOpen, setLaptopOpen] = useState(false);
+  // Which app the laptop lands on, so a room widget can deep-link into it.
+  const [laptopApp, setLaptopApp] = useState("browser");
   const [journalOpen, setJournalOpen] = useState(false);
   const [musicState, setMusicState] = useState({ playing: false, currentTime: 0, duration: 0 });
   const [volume, setVolumeState] = useState(0.75);
@@ -710,7 +794,7 @@ function StudyGirlExperience() {
         <Suspense fallback={<Loader />}>
           <WindowSky />
           <StudyGirlModel onReady={onReady} />
-          <LaptopHotspot onOpen={() => setLaptopOpen(true)} disabled={laptopOpen} />
+          <LaptopHotspot onOpen={() => { setLaptopApp("browser"); setLaptopOpen(true); }} disabled={laptopOpen} />
         </Suspense>
         <OrbitCamera controls={controls} bounds={bounds} enabled={!laptopOpen && !journalOpen} />
       </Canvas>
@@ -748,13 +832,20 @@ function StudyGirlExperience() {
         </DraggableWidget>
       )}
 
+      {/* Defaults to on: the schedule is only useful if it is visible. */}
+      {!laptopOpen && !journalOpen && settings?.showCalendarWidget !== false && (
+        <DraggableWidget id="calendar" defaultPos={{ x: Math.max(20, winWidth - 300), y: 440 }}>
+          <RoomCalendarWidget onOpenApp={(id) => { setLaptopApp(id); setLaptopOpen(true); }} />
+        </DraggableWidget>
+      )}
+
       {!laptopOpen && !journalOpen && settings?.showFlashcardsWidget && (
         <DraggableWidget id="flashcards" defaultPos={{ x: 22, y: 310 }}>
           <RoomFlashcardsWidget onOpenApp={() => setLaptopOpen(true)} />
         </DraggableWidget>
       )}
 
-      {laptopOpen && <LaptopOS onClose={() => setLaptopOpen(false)} music={music} />}
+      {laptopOpen && <LaptopOS onClose={() => setLaptopOpen(false)} music={music} initialApp={laptopApp} />}
     </main>
   );
 }

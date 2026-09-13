@@ -192,7 +192,7 @@ function DeckShelf({ decks, loading, onCreate, onOpen, onDelete, setMessage }) {
 }
 
 function DeckEditor({ deck, cards, setCards, onBack, onStudy, setMessage }) {
-  const { currentUser } = useGame();
+  const { currentUser, applyReward } = useGame();
   const [draft, setDraft] = useState(EMPTY_CARD);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -250,6 +250,13 @@ function DeckEditor({ deck, cards, setCards, onBack, onStudy, setMessage }) {
       });
       setCards((current) => [...current, created]);
       setDraft(EMPTY_CARD);
+
+      // Authoring a card earns a little XP, capped server-side: a 0-XP answer
+      // is the normal daily-cap case, and a failure must never block the save.
+      api
+        .logProductive(currentUser, "flashcard_created", created.id)
+        .then((reward) => { if (reward?.xpGained > 0) applyReward(reward); })
+        .catch(() => {});
     } catch (err) {
       setMessage(err.message);
     } finally {
