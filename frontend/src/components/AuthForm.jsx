@@ -55,6 +55,7 @@ export default function AuthForm({ type }) {
       >
         {/* Funky title */}
         <div className="text-center">
+          <img src="/favicon.png" alt="" width={40} height={40} className="mx-auto mb-2" />
           <h1
             className="text-5xl tracking-widest text-white leading-none"
             style={{ fontFamily: "'Bangers', cursive", letterSpacing: "0.08em" }}
