@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@splinetool/react-spline": "^4.1.0",
+    "@splinetool/runtime": "^2.0.46",
     "@tailwindcss/vite": "^4.3.3",
     "canvas-confetti": "^1.9.4",
     "firebase": "^12.19.0",
