@@ -1,3 +1,5 @@
+export const STREAK_MILESTONES = [3, 7, 14, 30, 50, 100, 200, 365];
+
 export function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -16,6 +18,7 @@ export function weekKeys() {
     days.push({
       key: d.toISOString().slice(0, 10),
       label: d.toLocaleDateString(undefined, { weekday: "short" }),
+      dayOfMonth: d.getDate(),
     });
   }
   return days;
