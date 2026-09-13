@@ -22,9 +22,13 @@ const app = express();
 app.use(helmet());
 
 // Rate Limiting
+// Local dev traffic (page loads, HMR re-fetches, repeated manual testing)
+// easily exceeds a production-sized budget on one IP, so it's much looser
+// outside of NODE_ENV=production rather than tripping constantly in dev.
+const isProduction = process.env.NODE_ENV === "production";
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: isProduction ? 100 : 2000, // limit each IP to N requests per windowMs
   message: "Too many requests from this IP, please try again later."
 });
 app.use("/api/", limiter);

@@ -34,7 +34,7 @@ import LevelCard from "../components/habits/LevelCard";
 import AchievementsPath from "../components/habits/AchievementsPath";
 import RemindersCard from "../components/habits/RemindersCard";
 import { getAchievementProgress } from "../utils/achievements";
-import Mascot from "../components/habits/Mascot";
+import Mascot, { celebrationPoseForCategory } from "../components/habits/Mascot";
 
 const RECOVERY_DISMISSED_KEY = "habit-recovery-dismissed";
 
@@ -59,8 +59,10 @@ export default function Dashboard() {
   const [recoveryHabit, setRecoveryHabit] = useState(null);
   const [journeyOpen, setJourneyOpen] = useState(false);
   const [celebrationMascot, setCelebrationMascot] = useState(false);
+  const [celebrationPose, setCelebrationPose] = useState("celebrate");
 
-  function showCelebrationMascot() {
+  function showCelebrationMascot(pose = "celebrate") {
+    setCelebrationPose(pose);
     setCelebrationMascot(true);
     setTimeout(() => setCelebrationMascot(false), 1800);
   }
@@ -176,18 +178,17 @@ export default function Dashboard() {
       if (stats) setBackendUser((u) => (u ? { ...u, stats } : u));
 
       celebrate();
+      showCelebrationMascot(celebrationPoseForCategory(habit.category));
 
       const newStreak = streakFromKeys([...(logsByHabit90d[habit.id] || []), today]).current;
       const hitMilestone = STREAK_MILESTONES.includes(newStreak);
       const leveledUp = previousLevel != null && stats?.level > previousLevel;
       if (hitMilestone || leveledUp) {
         setTimeout(celebrateMilestone, 150);
-        showCelebrationMascot();
       }
 
       if (willCompleteAll) {
         setTimeout(celebrateBig, 300);
-        showCelebrationMascot();
       }
     }
   }
@@ -242,7 +243,6 @@ export default function Dashboard() {
       <div className="max-w-6xl mx-auto">
         <header className="flex items-start justify-between gap-4 flex-wrap mb-6">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Habitify" className="w-14 h-14 rounded-xl" />
             <Mascot pose="wave" size={56} />
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">
@@ -309,7 +309,7 @@ export default function Dashboard() {
                 </div>
                 <div className="relative w-[52px] h-[52px]">
                   <ProgressRing value={todayProgress} size={52} stroke={5} />
-                  <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold">
+                  <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-black">
                     {todayProgress}%
                   </div>
                 </div>
@@ -428,7 +428,7 @@ export default function Dashboard() {
 
       {celebrationMascot && (
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-          <Mascot pose="celebrate" size={180} className="animate-bounce" />
+          <Mascot pose={celebrationPose} size={180} className="animate-bounce" />
         </div>
       )}
     </div>
