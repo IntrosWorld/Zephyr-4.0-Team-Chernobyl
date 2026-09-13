@@ -28,8 +28,12 @@ const limiter = rateLimit({
 app.use("/api/", limiter);
 
 // CORS Config
+// Reflects whatever origin the request came from instead of one hardcoded
+// port, so any teammate's dev server (different port, different machine)
+// can talk to this backend. Protected routes still require a valid Firebase
+// ID token, so this doesn't loosen who can actually read/write data.
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  origin: true,
   credentials: true
 }));
 
