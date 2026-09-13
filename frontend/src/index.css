@@ -63,6 +63,9 @@ body {
 .icon-notes i { width: 1.45rem; height: 1rem; background: repeating-linear-gradient(#d6d7d4 0 1px,transparent 1px 5px); }
 .icon-files { background: linear-gradient(90deg,#57a9ed 0 50%,#9dd5ff 50%) !important; }
 .icon-files i { width: 1.4rem; height: 1rem; border-bottom: 2px solid #153f69; border-radius: 0 0 50% 50%; }.icon-files i::before { content: ""; position: absolute; left: .62rem; top: -.45rem; height: .85rem; border-left: 1px solid #153f69; }
+.icon-cards { background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%) !important; color: #fff !important; }
+.icon-trackers { background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; color: #fff !important; }
+.icon-settings { background: linear-gradient(135deg, #64748b 0%, #334155 100%) !important; color: #fff !important; }
 .os-window { position: absolute; z-index: 3; inset: 7% 9% 10% 10%; min-width: 0; min-height: 0; display: grid; grid-template-rows: 2.65rem minmax(0,1fr); overflow: hidden; border: 1px solid rgba(255,255,255,.7); border-radius: 13px; background: rgba(247,243,233,.95); box-shadow: 0 28px 80px rgba(24,47,54,.34); }
 .os-window.is-minimized { display: none; }
 .os-widget-stack { position: absolute; z-index: 2; top: 4.1rem; right: 1.2rem; width: min(15rem,30%); display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; color: #263843; }

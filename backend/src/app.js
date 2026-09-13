@@ -9,6 +9,8 @@ const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const integrationRoutes = require("./routes/integrationRoutes");
+const deckRoutes = require("./routes/deckRoutes");
+const uploadRoutes = require("./routes/uploadRoutes");
 const { errorHandler, notFoundHandler } = require("./middleware/errorMiddleware");
 
 // Initialize Firebase Admin SDK
@@ -51,6 +53,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/integrations", integrationRoutes);
+app.use("/api/decks", deckRoutes);
+app.use("/api/upload", uploadRoutes);
 
 // Error Handling
 app.use(notFoundHandler);

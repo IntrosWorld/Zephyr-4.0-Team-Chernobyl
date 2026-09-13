@@ -1,58 +1,137 @@
-const { getDb } = require("../config/firebaseAdmin");
+const { query, withTransaction } = require("../config/db");
+const { ATTRIBUTES } = require("../config/gameConfig");
 
 /**
- * Ensures a user document exists in Firestore.
- * If it doesn't, creates one with default RPG stats.
+ * Reshapes flat SQL columns into the nested object the frontend consumes.
+ * Keeping this shape stable means the API contract didn't change when the
+ * storage moved from Firestore to Postgres.
  */
-const getOrCreateUser = async (uid, email, displayName) => {
-  const userRef = getDb().collection("users").doc(uid);
-  const doc = await userRef.get();
+function serializeUser(row, attributeRows = []) {
+  const attributes = Object.fromEntries(ATTRIBUTES.map((name) => [name, { level: 1, xp: 0 }]));
+  attributeRows.forEach((a) => {
+    attributes[a.name] = { level: a.level, xp: a.xp };
+  });
 
-  if (!doc.exists) {
-    const newUser = {
+  return {
+    uid: row.uid,
+    email: row.email,
+    displayName: row.display_name,
+    name: row.display_name,
+    stats: {
+      level: row.level,
+      xp: row.xp,
+      xpIntoLevel: row.xp_into_level,
+      gold: row.gold,
+      totalCompleted: row.total_completed,
+    },
+    attributes,
+    streak: {
+      current: row.streak_current,
+      longest: row.streak_longest,
+      // Already a "YYYY-MM-DD" string; see the DATE type parser in config/db.js.
+      lastActiveDay: row.last_active_day || null,
+    },
+    integrations: {
+      github: row.github_username,
+      leetcode: row.leetcode_username,
+    },
+    settings: row.settings ?? {},
+    createdAt: row.created_at,
+    lastLogin: row.last_login,
+  };
+}
+
+async function loadUser(uid) {
+  const [user, attributes] = await Promise.all([
+    query("SELECT * FROM users WHERE uid = $1", [uid]),
+    query("SELECT name, level, xp FROM attributes WHERE uid = $1", [uid]),
+  ]);
+
+  if (!user.rowCount) return null;
+  return serializeUser(user.rows[0], attributes.rows);
+}
+
+/**
+ * Ensures a row exists for this Firebase user, creating it with default RPG
+ * stats on first sign-in. Runs in a transaction so a new account can never end
+ * up existing without its attribute rows.
+ */
+async function getOrCreateUser(uid, email, displayName) {
+  await withTransaction(async (client) => {
+    await client.query(
+      `INSERT INTO users (uid, email, display_name, settings)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (uid) DO UPDATE
+         SET last_login = now(),
+             -- Refresh identity fields in case they changed in Firebase,
+             -- but never clobber them with nulls from a partial profile.
+             email = COALESCE(EXCLUDED.email, users.email),
+             display_name = COALESCE(EXCLUDED.display_name, users.display_name)`,
+      [
+        uid,
+        email,
+        displayName || "Hero",
+        JSON.stringify({ reducedMotion: false, autoplaySeconds: 8, soundVolume: 0.7 }),
+      ]
+    );
+
+    // Seed any attribute the account is missing. Also backfills accounts that
+    // predate a newly added attribute.
+    await client.query(
+      `INSERT INTO attributes (uid, name)
+       SELECT $1, unnest($2::text[])
+       ON CONFLICT (uid, name) DO NOTHING`,
+      [uid, ATTRIBUTES]
+    );
+  });
+
+  return loadUser(uid);
+}
+
+async function updateIntegrations(uid, { github, leetcode }) {
+  // A boolean "was this field supplied?" flag per column, because COALESCE
+  // alone can't tell "leave it alone" (undefined) apart from "clear it" (""),
+  // and both arrive as NULL once they hit SQL.
+  const result = await query(
+    `UPDATE users
+        SET github_username   = CASE WHEN $2::boolean THEN $3 ELSE github_username   END,
+            leetcode_username = CASE WHEN $4::boolean THEN $5 ELSE leetcode_username END
+      WHERE uid = $1
+      RETURNING github_username, leetcode_username`,
+    [
       uid,
-      email,
-      displayName: displayName || "Hero",
-      stats: {
-        level: 1,
-        xp: 0,
-        gold: 0,
-        maxHp: 50,
-        currentHp: 50,
-      },
-      integrations: {
-        github: null,
-        leetcode: null,
-      },
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-    };
+      github !== undefined,
+      github || null,
+      leetcode !== undefined,
+      leetcode || null,
+    ]
+  );
 
-    await userRef.set(newUser);
-    return newUser;
+  if (!result.rowCount) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
   }
 
-  // Update last login
-  await userRef.update({ lastLogin: new Date().toISOString() });
+  return {
+    github: result.rows[0].github_username,
+    leetcode: result.rows[0].leetcode_username,
+  };
+}
 
-  return doc.data();
-};
+async function updateSettings(uid, settings) {
+  const result = await query(
+    `UPDATE users SET settings = settings || $2::jsonb WHERE uid = $1 RETURNING settings`,
+    [uid, JSON.stringify(settings)]
+  );
 
-/**
- * Saves the usernames a user wants tracked for external integrations
- * (GitHub, LeetCode, ...). Pass null/undefined to leave a field unchanged.
- */
-const updateIntegrations = async (uid, { github, leetcode }) => {
-  const userRef = getDb().collection("users").doc(uid);
+  if (!result.rowCount) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
+  }
 
-  const updates = {};
-  if (github !== undefined) updates["integrations.github"] = github || null;
-  if (leetcode !== undefined) updates["integrations.leetcode"] = leetcode || null;
+  return result.rows[0].settings;
+}
 
-  await userRef.update(updates);
-
-  const doc = await userRef.get();
-  return doc.data().integrations;
-};
-
-module.exports = { getOrCreateUser, updateIntegrations };
+module.exports = { getOrCreateUser, updateIntegrations, updateSettings, loadUser, serializeUser };

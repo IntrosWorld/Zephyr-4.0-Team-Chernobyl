@@ -38,12 +38,22 @@ export default function Dashboard() {
       <div className="max-w-4xl mx-auto">
         <header className="flex justify-between items-center mb-12">
           <h1 className="text-3xl font-bold tracking-tight">Life RPG</h1>
-          <button 
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-600/80 hover:bg-red-500 rounded-lg transition-colors font-medium text-sm"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/study-girl")}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors font-semibold text-sm"
+            >
+              Enter Lo-Fi Room
+            </button>
+            <button 
+              type="button"
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600/80 hover:bg-red-500 rounded-lg transition-colors font-medium text-sm"
+            >
+              Logout
+            </button>
+          </div>
         </header>
 
         <div className="glass-panel rounded-2xl p-8 mb-8">

@@ -2,6 +2,12 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { Canvas, useThree } from "@react-three/fiber";
 import { Html, OrbitControls, useAnimations, useGLTF, useProgress, useTexture } from "@react-three/drei";
 import { Box3, DoubleSide, SRGBColorSpace, Vector3 } from "three";
+import { GameProvider } from "../context/GameContext";
+import RoomHud from "../components/RoomHud";
+import QuestJournal from "../components/QuestJournal";
+import FlashcardsApp from "../components/FlashcardsApp";
+import StatsWidgets from "../components/StatsWidgets";
+import SettingsApp from "../components/SettingsApp";
 
 const MODEL_URL = "/models/study-girl/15961a17a125467e9367ee452fd1950c_Textured.gltf";
 const NCS_TRACKS = [
@@ -139,11 +145,47 @@ function Loader() {
 const laptopApps = [
   { id: "browser", label: "Safari" },
   { id: "spotify", label: "Spotify" },
+  { id: "cards", label: "Flashcards" },
+  { id: "trackers", label: "Trackers" },
   { id: "notes", label: "Notes" },
   { id: "files", label: "Finder" },
+  { id: "settings", label: "Settings" },
 ];
 
 function MacAppIcon({ app }) {
+  if (app.id === "cards") {
+    return (
+      <span className="mac-app-icon icon-cards" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="6" width="13" height="14" rx="2.5" fill="rgba(255,255,255,0.25)" stroke="#ffffff" />
+          <path d="M7 3h12a2.5 2.5 0 0 1 2.5 2.5v11" stroke="#ffffff" strokeWidth="2" fill="none" />
+          <line x1="6" y1="11" x2="11" y2="11" stroke="#ffffff" strokeWidth="2" />
+          <line x1="6" y1="15" x2="9" y2="15" stroke="#ffffff" strokeWidth="2" />
+        </svg>
+      </span>
+    );
+  }
+  if (app.id === "trackers") {
+    return (
+      <span className="mac-app-icon icon-trackers" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 3v18h18" stroke="#ffffff" />
+          <path d="M18 8l-5 6-3-3-4 4" stroke="#ffffff" strokeWidth="2.5" />
+          <circle cx="18" cy="8" r="1.8" fill="#ffffff" />
+        </svg>
+      </span>
+    );
+  }
+  if (app.id === "settings") {
+    return (
+      <span className="mac-app-icon icon-settings" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" fill="rgba(255,255,255,0.3)" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      </span>
+    );
+  }
   return <span className={`mac-app-icon icon-${app.id}`} aria-hidden="true"><i /></span>;
 }
 
@@ -325,6 +367,12 @@ function LaptopOS({ onClose, music }) {
           </div>
         )}
 
+        {activeApp === "cards" && <FlashcardsApp />}
+
+        {activeApp === "trackers" && <StatsWidgets />}
+
+        {activeApp === "settings" && <SettingsApp />}
+
         {!activeApp && <div className="os-empty">Choose an application from the desktop or dock.</div>}
       </article>
 
@@ -335,11 +383,12 @@ function LaptopOS({ onClose, music }) {
   );
 }
 
-export default function StudyGirlPage() {
+function StudyGirlExperience() {
   const controls = useRef(null);
   const audioRef = useRef(null);
   const [bounds, setBounds] = useState(null);
   const [laptopOpen, setLaptopOpen] = useState(false);
+  const [journalOpen, setJournalOpen] = useState(false);
   const [musicState, setMusicState] = useState({ playing: false, currentTime: 0, duration: 0 });
   const [volume, setVolumeState] = useState(0.75);
   const [muted, setMuted] = useState(false);
@@ -442,10 +491,6 @@ export default function StudyGirlPage() {
   };
 
   const onReady = useMemo(() => (nextBounds) => setBounds(nextBounds), []);
-  const resetView = () => {
-    if (!bounds) return;
-    controls.current?.reset();
-  };
 
   return (
     <main className="study-page">
@@ -467,25 +512,29 @@ export default function StudyGirlPage() {
           <StudyGirlModel onReady={onReady} />
           <LaptopHotspot onOpen={() => setLaptopOpen(true)} disabled={laptopOpen} />
         </Suspense>
-        <OrbitCamera controls={controls} bounds={bounds} enabled={!laptopOpen} />
+        <OrbitCamera controls={controls} bounds={bounds} enabled={!laptopOpen && !journalOpen} />
       </Canvas>
 
-      <header className="study-hud">
-        <div><span className="study-kicker">Study Girl // 3D room viewer</span><h1>Lo-Fi room</h1><p>Drag to orbit · scroll to zoom</p></div>
-        <div className="study-status"><strong>Ready</strong><span>Orbit view</span></div>
-      </header>
-      <aside className="study-controls">
-        <strong>Explore the room</strong>
-        <span><kbd>Left drag</kbd> orbit</span>
-        <span><kbd>Right drag</kbd> pan</span>
-        <span><kbd>Scroll</kbd> zoom in / out</span>
-        <button type="button" onClick={resetView}>Reset view</button>
-      </aside>
       <button className="study-back" type="button" onClick={() => window.history.back()}>← Back</button>
+      {!laptopOpen && !journalOpen && <RoomHud onOpenJournal={() => setJournalOpen(true)} />}
+      {!laptopOpen && !journalOpen && (
+        <button type="button" className="journal-open-button" onClick={() => setJournalOpen(true)}>
+          <span aria-hidden="true">&#9634;</span> Quest journal
+        </button>
+      )}
+      <QuestJournal open={journalOpen} onClose={() => setJournalOpen(false)} />
       {!laptopOpen && <RoomClockWidget />}
       {musicState.playing && !laptopOpen && <div className="room-music-widget"><MusicControls music={music} compact /></div>}
       {laptopOpen && <LaptopOS onClose={() => setLaptopOpen(false)} music={music} />}
     </main>
+  );
+}
+
+export default function StudyGirlPage() {
+  return (
+    <GameProvider>
+      <StudyGirlExperience />
+    </GameProvider>
   );
 }
 
