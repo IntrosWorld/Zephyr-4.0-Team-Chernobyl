@@ -1,7 +1,7 @@
 # Habitify
 
 <p align="center">
-  <img src="frontend/public/logo.png" alt="Habitify Logo" width="130" />
+  <img src="frontend/public/mascot/wave.png" alt="Habitify mascot" width="130" />
 </p>
 
 <p align="center">
