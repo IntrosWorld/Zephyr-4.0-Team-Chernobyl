@@ -102,7 +102,7 @@ export default function FlashcardsApp() {
 }
 
 function DeckShelf({ decks, loading, onCreate, onOpen, onDelete, setMessage }) {
-  const { currentUser } = useGame();
+  const { currentUser, settings, saveSettings } = useGame();
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -148,6 +148,19 @@ function DeckShelf({ decks, loading, onCreate, onOpen, onDelete, setMessage }) {
           <button type="submit" disabled={busy || !title.trim()}>Create</button>
         </form>
       </header>
+
+      <div style={{ margin: "0.5rem 0 1rem", padding: "0.65rem 0.85rem", background: "rgba(25, 40, 50, 0.06)", border: "1px solid rgba(25, 40, 50, 0.14)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <strong style={{ display: "block", color: "#1e293b", fontSize: "0.8rem", fontWeight: "700" }}>Show Flashcards widget on 3D room</strong>
+          <small style={{ color: "#475569", fontSize: "0.68rem" }}>Pins interactive flashcards directly to your room wallpaper.</small>
+        </div>
+        <input
+          type="checkbox"
+          style={{ width: "1.15rem", height: "1.15rem", cursor: "pointer", accentColor: "#0284c7" }}
+          checked={Boolean(settings.showFlashcardsWidget)}
+          onChange={(e) => saveSettings({ showFlashcardsWidget: e.target.checked })}
+        />
+      </div>
 
       {loading && <p className="cards-loading">Loading decks…</p>}
 

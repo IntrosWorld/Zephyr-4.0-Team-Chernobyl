@@ -3,11 +3,12 @@ import { useGame, ATTRIBUTE_META, xpForLevel } from "../context/GameContext";
 import { useAuth } from "../context/AuthContext";
 
 const PANES = [
-  { id: "profile", label: "Profile", icon: "◍" },
-  { id: "appearance", label: "Appearance", icon: "◐" },
-  { id: "flashcards", label: "Flashcards", icon: "▤" },
-  { id: "accessibility", label: "Accessibility", icon: "◉" },
-  { id: "account", label: "Account", icon: "⌂" },
+  { id: "profile", label: "Profile" },
+  { id: "widgets", label: "Room Widgets" },
+  { id: "appearance", label: "Appearance" },
+  { id: "flashcards", label: "Flashcards" },
+  { id: "accessibility", label: "Accessibility" },
+  { id: "account", label: "Account" },
 ];
 
 /** macOS System Settings-style app: sidebar of panes, detail on the right. */
@@ -25,13 +26,14 @@ export default function SettingsApp() {
             aria-current={pane === p.id ? "page" : undefined}
             onClick={() => setPane(p.id)}
           >
-            <span aria-hidden="true">{p.icon}</span> {p.label}
+            {p.label}
           </button>
         ))}
       </nav>
 
       <section className="settings-pane">
         {pane === "profile" && <ProfilePane />}
+        {pane === "widgets" && <WidgetsPane />}
         {pane === "appearance" && <AppearancePane />}
         {pane === "flashcards" && <FlashcardPane />}
         {pane === "accessibility" && <AccessibilityPane />}
@@ -180,6 +182,80 @@ function AppearancePane() {
   );
 }
 
+function WidgetsPane() {
+  const { signedIn, settings, saveSettings } = useGame();
+
+  if (!signedIn) return <p className="settings-guest">Sign in to customize room widgets.</p>;
+
+  const resetPositions = () => {
+    ["hud", "clock", "music", "flashcards", "trackers"].forEach((id) => {
+      try { localStorage.removeItem(`widget_pos_${id}`); } catch (e) {}
+    });
+    window.location.reload();
+  };
+
+  return (
+    <>
+      <h2>Room Widgets</h2>
+      <p className="settings-sub">Toggle and pin movable widgets directly to your 3D room wallpaper.</p>
+
+      <label className="settings-row">
+        <span>
+          Flashcards widget
+          <small>Show flashcards study card overlay on 3D room (left side by default).</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={Boolean(settings.showFlashcardsWidget)}
+          onChange={(e) => saveSettings({ showFlashcardsWidget: e.target.checked })}
+        />
+      </label>
+
+      <label className="settings-row">
+        <span>
+          GitHub & LeetCode trackers widget
+          <small>Show developer stats overlay on 3D room (right side by default).</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={Boolean(settings.showTrackersWidget)}
+          onChange={(e) => saveSettings({ showTrackersWidget: e.target.checked })}
+        />
+      </label>
+
+      <label className="settings-row">
+        <span>
+          Character HUD widget
+          <small>Show Level, XP, Gold, and Streak HUD on 3D room.</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={settings.showHudWidget !== false}
+          onChange={(e) => saveSettings({ showHudWidget: e.target.checked })}
+        />
+      </label>
+
+      <label className="settings-row">
+        <span>
+          Analog Clock widget
+          <small>Show live clock widget on 3D room.</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={settings.showClockWidget !== false}
+          onChange={(e) => saveSettings({ showClockWidget: e.target.checked })}
+        />
+      </label>
+
+      <div style={{ marginTop: "1.2rem" }}>
+        <button type="button" className="journal-primary" onClick={resetPositions}>
+          Reset widget positions
+        </button>
+      </div>
+    </>
+  );
+}
+
 function FlashcardPane() {
   const { signedIn, settings, saveSettings } = useGame();
   const [seconds, setSeconds] = useState(settings.autoplaySeconds ?? 8);
@@ -189,6 +265,17 @@ function FlashcardPane() {
   return (
     <>
       <h2>Flashcards</h2>
+      <label className="settings-row">
+        <span>
+          Show widget on 3D room
+          <small>Displays a movable Flashcards study widget overlay directly in your room.</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={Boolean(settings.showFlashcardsWidget)}
+          onChange={(e) => saveSettings({ showFlashcardsWidget: e.target.checked })}
+        />
+      </label>
       <label className="settings-row">
         <span>
           Autoplay interval

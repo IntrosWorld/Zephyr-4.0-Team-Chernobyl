@@ -2,7 +2,8 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { Canvas, useThree } from "@react-three/fiber";
 import { Html, OrbitControls, useAnimations, useGLTF, useProgress, useTexture } from "@react-three/drei";
 import { Box3, DoubleSide, SRGBColorSpace, Vector3 } from "three";
-import { GameProvider } from "../context/GameContext";
+import { GameProvider, useGame } from "../context/GameContext";
+import * as api from "../lib/api";
 import RoomHud from "../components/RoomHud";
 import QuestJournal from "../components/QuestJournal";
 import FlashcardsApp from "../components/FlashcardsApp";
@@ -11,7 +12,7 @@ import SettingsApp from "../components/SettingsApp";
 
 const MODEL_URL = "/models/study-girl/15961a17a125467e9367ee452fd1950c_Textured.gltf";
 const NCS_TRACKS = [
-  { title: "Dreamer", artist: "Alan Walker", url: "https://ncs.io/track/download/af3e020d-b90d-439a-9106-76eb863784eb", color: "#7b2ea3" },
+  { title: "Dreamer", artist: "Alan Walker", url: "https://ncsmusic.s3.eu-west-1.amazonaws.com/tracks/000/001/378/dreamer-1680825645-w02oSTah2D.mp3", color: "#7b2ea3" },
   { title: "Sky High", artist: "Elektronomia", url: "https://ncsmusic.s3.eu-west-1.amazonaws.com/tracks/000/000/290/sky-high-1586948785-jGkCsW2xA9.mp3", color: "#176ba0" },
   { title: "Heroes Tonight", artist: "Janji feat. Johnning", url: "https://ncsmusic.s3.eu-west-1.amazonaws.com/tracks/000/000/143/heroes-tonight-feat-johnning-1586946924-fcppiBJp7z.mp3", color: "#b54735" },
   { title: "On & On", artist: "Cartoon feat. Daniel Levi", url: "https://ncsmusic.s3.eu-west-1.amazonaws.com/tracks/000/000/152/1654766391_N6n9kRBaAr_Cartoon---On--On-feat.-Daniel-Levi-_NCS-Release_.mp3", color: "#2b8768" },
@@ -187,6 +188,203 @@ function MacAppIcon({ app }) {
     );
   }
   return <span className={`mac-app-icon icon-${app.id}`} aria-hidden="true"><i /></span>;
+}
+
+function DraggableWidget({ id, defaultPos, className = "", children }) {
+  const [pos, setPos] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`widget_pos_${id}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.x === "number" && typeof parsed.y === "number") return parsed;
+      }
+    } catch (e) {}
+    return defaultPos;
+  });
+
+  const [dragging, setDragging] = useState(false);
+  const dragStart = useRef({ mouseX: 0, mouseY: 0, posX: 0, posY: 0 });
+
+  const handlePointerDown = (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest("button, input, select, textarea, a, range, [role='button']")) return;
+
+    setDragging(true);
+    dragStart.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      posX: pos.x,
+      posY: pos.y,
+    };
+    e.stopPropagation();
+  };
+
+  useEffect(() => {
+    if (!dragging) return undefined;
+
+    const handlePointerMove = (e) => {
+      const dx = e.clientX - dragStart.current.mouseX;
+      const dy = e.clientY - dragStart.current.mouseY;
+      const newX = Math.max(0, Math.min(window.innerWidth - 80, dragStart.current.posX + dx));
+      const newY = Math.max(0, Math.min(window.innerHeight - 50, dragStart.current.posY + dy));
+      setPos({ x: newX, y: newY });
+    };
+
+    const handlePointerUp = () => {
+      setDragging(false);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [dragging]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`widget_pos_${id}`, JSON.stringify(pos));
+    } catch (e) {}
+  }, [id, pos]);
+
+  return (
+    <div
+      className={`draggable-widget ${className} ${dragging ? "is-dragging" : ""}`}
+      style={{
+        position: "fixed",
+        left: `${pos.x}px`,
+        top: `${pos.y}px`,
+        zIndex: dragging ? 100 : 10,
+        cursor: dragging ? "grabbing" : "grab",
+        userSelect: "none",
+        touchAction: "none",
+      }}
+      onPointerDown={handlePointerDown}
+    >
+      {children}
+    </div>
+  );
+}
+
+function RoomFlashcardsWidget({ onOpenApp }) {
+  const { currentUser } = useGame();
+  const [deck, setDeck] = useState(null);
+  const [cards, setCards] = useState([]);
+  const [cardIndex, setCardIndex] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    api.getDecks(currentUser).then((decks) => {
+      if (decks && decks.length > 0) {
+        setDeck(decks[0]);
+        api.getCards(currentUser, decks[0].id).then((loaded) => {
+          if (loaded && loaded.length > 0) setCards(loaded);
+        });
+      }
+    });
+  }, [currentUser]);
+
+  const currentCard = cards[cardIndex];
+
+  return (
+    <div className="room-widget room-flashcard-widget">
+      <header className="room-widget-header">
+        <strong>Flashcards</strong>
+        <button type="button" className="room-widget-link" onClick={() => onOpenApp("cards")}>Open App</button>
+      </header>
+      {deck && currentCard ? (
+        <div className="room-widget-body" onClick={() => setFlipped(!flipped)}>
+          <div className="room-widget-subhead">
+            <span className="room-card-badge">{flipped ? "Answer" : "Question"} · Card {cardIndex + 1}/{cards.length}</span>
+            <small>{deck.title}</small>
+          </div>
+          <p className="room-card-text">{flipped ? currentCard.back : currentCard.front}</p>
+          <div className="room-widget-actions">
+            <small className="room-card-hint">Click card to flip</small>
+            {cards.length > 1 && (
+              <button
+                type="button"
+                className="room-widget-next"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFlipped(false);
+                  setCardIndex((i) => (i + 1) % cards.length);
+                }}
+              >
+                Next
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="room-widget-body empty" onClick={() => onOpenApp("cards")}>
+          <p className="room-card-text">No study decks created yet.</p>
+          <small className="room-card-hint">+ Click to open Flashcards app</small>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RoomTrackersWidget({ onOpenApp }) {
+  const { currentUser, profile } = useGame();
+  const [githubStats, setGithubStats] = useState(null);
+  const [leetcodeStats, setLeetcodeStats] = useState(null);
+
+  useEffect(() => {
+    if (!currentUser || !profile) return;
+    if (profile?.integrations?.github) {
+      api.getGithubStats(currentUser).then(setGithubStats).catch(() => {});
+    }
+    if (profile?.integrations?.leetcode) {
+      api.getLeetcodeStats(currentUser).then(setLeetcodeStats).catch(() => {});
+    }
+  }, [currentUser, profile]);
+
+  const ghName = profile?.integrations?.github;
+  const lcName = profile?.integrations?.leetcode;
+
+  return (
+    <div className="room-widget room-trackers-widget">
+      <header className="room-widget-header">
+        <strong>Developer Stats</strong>
+        <button type="button" className="room-widget-link" onClick={() => onOpenApp("trackers")}>Edit</button>
+      </header>
+      <div className="room-widget-body">
+        {ghName ? (
+          <div className="room-tracker-row" onClick={() => onOpenApp("trackers")}>
+            <span className="tracker-badge gh">GitHub</span>
+            <div>
+              <b>@{ghName}</b>
+              <small>{githubStats ? `${githubStats.publicRepos} repos · ${githubStats.currentStreak ?? 0}d streak` : "Connected"}</small>
+            </div>
+          </div>
+        ) : (
+          <div className="room-tracker-row empty" onClick={() => onOpenApp("trackers")}>
+            <span className="tracker-badge gh">+ GitHub</span>
+            <small>Connect username</small>
+          </div>
+        )}
+
+        {lcName ? (
+          <div className="room-tracker-row" onClick={() => onOpenApp("trackers")}>
+            <span className="tracker-badge lc">LeetCode</span>
+            <div>
+              <b>@{lcName}</b>
+              <small>{leetcodeStats ? `${leetcodeStats.totalSolved} solved (${leetcodeStats.easySolved}E/${leetcodeStats.mediumSolved}M/${leetcodeStats.hardSolved}H)` : "Connected"}</small>
+            </div>
+          </div>
+        ) : (
+          <div className="room-tracker-row empty" onClick={() => onOpenApp("trackers")}>
+            <span className="tracker-badge lc">+ LeetCode</span>
+            <small>Connect username</small>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function AnalogClock({ date }) {
@@ -384,6 +582,7 @@ function LaptopOS({ onClose, music }) {
 }
 
 function StudyGirlExperience() {
+  const { settings } = useGame();
   const controls = useRef(null);
   const audioRef = useRef(null);
   const [bounds, setBounds] = useState(null);
@@ -491,6 +690,7 @@ function StudyGirlExperience() {
   };
 
   const onReady = useMemo(() => (nextBounds) => setBounds(nextBounds), []);
+  const winWidth = typeof window !== "undefined" ? window.innerWidth : 1000;
 
   return (
     <main className="study-page">
@@ -516,15 +716,44 @@ function StudyGirlExperience() {
       </Canvas>
 
       <button className="study-back" type="button" onClick={() => window.history.back()}>← Back</button>
-      {!laptopOpen && !journalOpen && <RoomHud onOpenJournal={() => setJournalOpen(true)} />}
+      
+      {!laptopOpen && !journalOpen && (settings?.showHudWidget !== false) && (
+        <DraggableWidget id="hud" defaultPos={{ x: 22, y: 112 }}>
+          <RoomHud onOpenJournal={() => setJournalOpen(true)} />
+        </DraggableWidget>
+      )}
+
       {!laptopOpen && !journalOpen && (
         <button type="button" className="journal-open-button" onClick={() => setJournalOpen(true)}>
           <span aria-hidden="true">&#9634;</span> Quest journal
         </button>
       )}
       <QuestJournal open={journalOpen} onClose={() => setJournalOpen(false)} />
-      {!laptopOpen && <RoomClockWidget />}
-      {musicState.playing && !laptopOpen && <div className="room-music-widget"><MusicControls music={music} compact /></div>}
+      
+      {!laptopOpen && (settings?.showClockWidget !== false) && (
+        <DraggableWidget id="clock" defaultPos={{ x: Math.max(20, winWidth - 250), y: 112 }}>
+          <RoomClockWidget />
+        </DraggableWidget>
+      )}
+
+      {musicState.playing && !laptopOpen && (
+        <DraggableWidget id="music" defaultPos={{ x: Math.max(20, Math.floor(winWidth / 2) - 180), y: 16 }}>
+          <div className="room-music-widget"><MusicControls music={music} compact /></div>
+        </DraggableWidget>
+      )}
+
+      {!laptopOpen && !journalOpen && settings?.showTrackersWidget && (
+        <DraggableWidget id="trackers" defaultPos={{ x: Math.max(20, winWidth - 300), y: 240 }}>
+          <RoomTrackersWidget onOpenApp={() => setLaptopOpen(true)} />
+        </DraggableWidget>
+      )}
+
+      {!laptopOpen && !journalOpen && settings?.showFlashcardsWidget && (
+        <DraggableWidget id="flashcards" defaultPos={{ x: 22, y: 310 }}>
+          <RoomFlashcardsWidget onOpenApp={() => setLaptopOpen(true)} />
+        </DraggableWidget>
+      )}
+
       {laptopOpen && <LaptopOS onClose={() => setLaptopOpen(false)} music={music} />}
     </main>
   );

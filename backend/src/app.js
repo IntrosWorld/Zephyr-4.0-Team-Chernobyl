@@ -24,10 +24,13 @@ app.use(helmet());
 // Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again later."
+  // Dev reloads burn requests fast: the room loads profile + quests + activity
+  // on every mount, StrictMode doubles that, and HMR remounts on every save.
+  max: process.env.NODE_ENV === "production" ? 100 : 1000,
+  message: { error: "Too many requests from this IP, please try again later." },
+  // Preflights aren't real work and shouldn't count toward the budget.
+  skip: (req) => req.method === "OPTIONS",
 });
-app.use("/api/", limiter);
 
 // CORS Config
 // Reflects whatever origin the request came from instead of one hardcoded
@@ -38,6 +41,11 @@ app.use(cors({
   origin: true,
   credentials: true
 }));
+
+// Mounted AFTER cors on purpose. When the limiter runs first its 429 response
+// carries no CORS headers, so the browser reports a rate-limit rejection as a
+// misleading "No 'Access-Control-Allow-Origin' header" error instead.
+app.use("/api/", limiter);
 
 // Body Parsers
 app.use(express.json());

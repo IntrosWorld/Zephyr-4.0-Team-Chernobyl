@@ -9,7 +9,7 @@ import * as api from "../lib/api";
  * user across devices rather than living in this browser.
  */
 export default function StatsWidgets() {
-  const { currentUser, signedIn, profile } = useGame();
+  const { currentUser, signedIn, profile, settings, saveSettings } = useGame();
 
   const [github, setGithub] = useState("");
   const [leetcode, setLeetcode] = useState("");
@@ -74,6 +74,19 @@ export default function StatsWidgets() {
       <header className="cards-head">
         <div><span className="cards-kicker">Connected</span><h2>Developer trackers</h2></div>
       </header>
+
+      <div style={{ margin: "0.5rem 0 1rem", padding: "0.65rem 0.85rem", background: "rgba(25, 40, 50, 0.06)", border: "1px solid rgba(25, 40, 50, 0.14)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <strong style={{ display: "block", color: "#1e293b", fontSize: "0.8rem", fontWeight: "700" }}>Show Trackers widget on 3D room</strong>
+          <small style={{ color: "#475569", fontSize: "0.68rem" }}>Pins developer stats directly to your room wallpaper.</small>
+        </div>
+        <input
+          type="checkbox"
+          style={{ width: "1.15rem", height: "1.15rem", cursor: "pointer", accentColor: "#0284c7" }}
+          checked={Boolean(settings.showTrackersWidget)}
+          onChange={(e) => saveSettings({ showTrackersWidget: e.target.checked })}
+        />
+      </div>
 
       <form className="stats-form" onSubmit={save}>
         <label>
